@@ -361,6 +361,7 @@ export default function Region({ data }: RegionProps) {
 
     if (!state.hasEntered) {
       targetY = 0;
+      enteredAtRef.current = null;
     } else if (
       enteredAtRef.current !== null &&
       clock.elapsedTime - enteredAtRef.current < waveDelay

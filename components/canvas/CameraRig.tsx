@@ -29,13 +29,14 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
   // Kamera overview mundur lebih jauh di mobile agar seluruh Aceh muat di layar vertikal
   // Posisi awal sebelum masuk
   useEffect(() => {
+    if (hasEntered) return;
     const start: [number, number, number] = isMobile ? [-4.2, 4.0, 9.2] : [-4.6, 2.7, 7.4];
     camera.position.set(...start);
     if (controlsRef.current) {
       controlsRef.current.target.set(-0.6, 0.15, -0.3);
       controlsRef.current.update();
     }
-  }, [camera, isMobile]);
+  }, [camera, isMobile, hasEntered]);
 
   // Animasi terbang sinematik saat pengguna menekan tombol "Masuk"
   useEffect(() => {
@@ -129,9 +130,13 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
     prevEnteredRef.current = hasEntered;
   }, [hasEntered, isMobile, camera, reducedMotion]);
 
+  const prevActiveRegionRef = useRef<string | null>(null);
+
   // Terbang kamera ke wilayah terpilih
   useEffect(() => {
     if (!hasEntered || !controlsRef.current) return;
+    if (prevActiveRegionRef.current === null && activeRegionId === null) return;
+    prevActiveRegionRef.current = activeRegionId;
 
     const centroid = activeRegionId ? getRegionCentroid(activeRegionId) : null;
     const overviewPos: [number, number, number] = isMobile ? [0, 8.8, 6.2] : [0, 6.35, 4.55];

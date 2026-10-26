@@ -50,66 +50,83 @@ class NusantaraAudioEngine {
    * Memastikan musik latar /audio/bungong-jeumpa.mp3 berputar dengan fade-in 2 detik
    */
   private initAndPlayBgMusic(onMissingFile?: (msg: string) => void): void {
-    const ctx = this.ensureContext();
-    if (!ctx || !this.masterGain) return;
+    try {
+      const ctx = this.ensureContext();
+      if (!ctx || !this.masterGain) return;
 
-    if (!this.bgAudio) {
-      const audio = new Audio(BUNGONG_JEUMPA_PATH);
-      audio.loop = true;
-      audio.preload = 'auto';
+      if (!this.bgAudio) {
+        const audio = new Audio(BUNGONG_JEUMPA_PATH);
+        audio.loop = true;
+        audio.preload = 'auto';
 
-      audio.addEventListener('loadedmetadata', () => {
-        if (audio.currentTime < TRACK_START_OFFSET) {
-          audio.currentTime = TRACK_START_OFFSET;
-        }
-      });
-
-      audio.addEventListener('timeupdate', () => {
-        if (audio.currentTime >= TRACK_LOOP_END) {
-          audio.currentTime = TRACK_START_OFFSET;
-          if (audio.paused && !this.isMuted) {
-            void audio.play().catch(() => {});
-          }
-        }
-      });
-
-      const fadeGain = ctx.createGain();
-      fadeGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-
-      const source = ctx.createMediaElementSource(audio);
-      source.connect(fadeGain);
-      fadeGain.connect(this.masterGain);
-
-      this.bgAudio = audio;
-      this.bgSource = source;
-      this.bgFadeGain = fadeGain;
-    }
-
-    if (this.bgAudio.paused) {
-      try {
-        if (this.bgAudio.readyState >= 1 && this.bgAudio.currentTime < TRACK_START_OFFSET) {
-          this.bgAudio.currentTime = TRACK_START_OFFSET;
-        }
-      } catch {
-        // Abaikan bila metadata belum siap
-      }
-
-      this.bgAudio
-        .play()
-        .then(() => {
-          this.bgStarted = true;
-          if (this.bgFadeGain && this.ctx) {
-            const now = this.ctx.currentTime;
-            this.bgFadeGain.gain.cancelScheduledValues(now);
-            this.bgFadeGain.gain.setValueAtTime(0.0001, now);
-            this.bgFadeGain.gain.linearRampToValueAtTime(0.62, now + 2.0);
-          }
-        })
-        .catch(() => {
-          if (onMissingFile) {
-            onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
+        audio.addEventListener('loadedmetadata', () => {
+          try {
+            if (audio.currentTime < TRACK_START_OFFSET) {
+              audio.currentTime = TRACK_START_OFFSET;
+            }
+          } catch {
+            // Abaikan bila metadata belum siap
           }
         });
+
+        audio.addEventListener('timeupdate', () => {
+          try {
+            if (audio.currentTime >= TRACK_LOOP_END) {
+              audio.currentTime = TRACK_START_OFFSET;
+              if (audio.paused && !this.isMuted) {
+                void audio.play().catch(() => {});
+              }
+            }
+          } catch {
+            // Abaikan
+          }
+        });
+
+        const fadeGain = ctx.createGain();
+        fadeGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+        try {
+          const source = ctx.createMediaElementSource(audio);
+          source.connect(fadeGain);
+          this.bgSource = source;
+        } catch {
+          // Jika createMediaElementSource dibatasi browser
+        }
+        fadeGain.connect(this.masterGain);
+
+        this.bgAudio = audio;
+        this.bgFadeGain = fadeGain;
+      }
+
+      if (this.bgAudio.paused) {
+        try {
+          if (this.bgAudio.readyState >= 1 && this.bgAudio.currentTime < TRACK_START_OFFSET) {
+            this.bgAudio.currentTime = TRACK_START_OFFSET;
+          }
+        } catch {
+          // Abaikan bila metadata belum siap
+        }
+
+        this.bgAudio
+          .play()
+          .then(() => {
+            this.bgStarted = true;
+            if (this.bgFadeGain && this.ctx) {
+              const now = this.ctx.currentTime;
+              this.bgFadeGain.gain.cancelScheduledValues(now);
+              this.bgFadeGain.gain.setValueAtTime(0.0001, now);
+              this.bgFadeGain.gain.linearRampToValueAtTime(0.62, now + 2.0);
+            }
+          })
+          .catch((err) => {
+            console.warn('Audio play error / autoplay blocked:', err);
+            if (onMissingFile) {
+              onMissingFile('Klik ikon suara untuk memutar musik pengiring Bungong Jeumpa.');
+            }
+          });
+      }
+    } catch (err) {
+      console.warn('AudioEngine error:', err);
     }
   }
 

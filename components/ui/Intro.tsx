@@ -52,35 +52,17 @@ export default function Intro() {
   if (hasEntered) return null;
 
   const handleEnter = () => {
-    audioEngine.startExperience((missingMsg) => {
-      showToast(missingMsg);
-    });
-    audioEngine.playInstrument('rapai');
+    // 1. Masuk langsung ke peta tanpa risiko tertahan oleh animasi atau audio
+    setEntered(true);
 
-    if (containerRef.current && contentRef.current) {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          setEntered(true);
-        }
+    // 2. Inisialisasi audio secara aman
+    try {
+      audioEngine.startExperience((missingMsg) => {
+        showToast(missingMsg);
       });
-
-      tl.to(contentRef.current, {
-        scale: 0.96,
-        y: -16,
-        opacity: 0,
-        duration: 0.45,
-        ease: 'power3.in'
-      }).to(
-        containerRef.current,
-        {
-          opacity: 0,
-          duration: 0.42,
-          ease: 'power2.out'
-        },
-        '-=0.22'
-      );
-    } else {
-      setEntered(true);
+      audioEngine.playInstrument('rapai');
+    } catch (err) {
+      console.warn('Audio start error:', err);
     }
   };
 
