@@ -25,7 +25,7 @@ export default function AudioControl({ accentColor }: { accentColor: string }) {
 
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl border border-[#25324d] bg-[#121a2b] px-3 py-1.5"
+      className="flex h-9 items-center gap-1.5 rounded-2xl border border-[#25324d] bg-[#121a2b]/95 px-2 shadow-lg backdrop-blur-md sm:gap-2.5 sm:px-3"
       style={{ ['--accent-color' as string]: accentColor }}
     >
       <button

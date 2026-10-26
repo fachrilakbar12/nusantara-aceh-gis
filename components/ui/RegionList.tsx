@@ -132,6 +132,37 @@ export default function RegionList() {
           })
         )}
       </div>
+
+      {/* Footer Drawer: Tombol Keluar ke Halaman Awal */}
+      <div className="mt-3 border-t border-[#25324d] pt-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            selectRegion(null);
+            setDrawerOpen(false);
+            audioEngine.playHoverTick();
+            useAcehStore.getState().setTourPlaying(false);
+            useAcehStore.getState().setEntered(false);
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ff6b6b]/40 bg-[#0b1220] py-2 text-xs font-semibold text-[#ff6b6b] transition-all hover:border-[#ff6b6b] hover:bg-[#ff6b6b]/15"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Keluar ke Halaman Awal</span>
+        </button>
+      </div>
     </aside>
   );
 }

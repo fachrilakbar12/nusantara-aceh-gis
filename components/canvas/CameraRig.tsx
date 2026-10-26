@@ -21,6 +21,7 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
   const isDraggingRef = useRef(false);
   const isAnimatingRef = useRef(false);
   const baseTargetRef = useRef<[number, number, number]>([...OVERVIEW_TARGET]);
+  const prevEnteredRef = useRef(hasEntered);
 
   // Deteksi rasio mobile/portrait
   const isMobile = size.width < 768 || size.width < size.height;
@@ -83,6 +84,50 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
       isAnimatingRef.current = false;
     };
   }, [hasEntered, camera, reducedMotion, isMobile]);
+
+  // Animasi kamera kembali ke sudut awal intro saat pengguna menekan "Keluar"
+  useEffect(() => {
+    if (prevEnteredRef.current && !hasEntered && controlsRef.current) {
+      audioEngine.playCameraWhoosh();
+      const startPos = camera.position.clone();
+      const startTarget = controlsRef.current.target.clone();
+      const introPos: [number, number, number] = isMobile ? [-4.2, 4.0, 9.2] : [-4.6, 2.7, 7.4];
+      const introTarget: [number, number, number] = [-0.6, 0.15, -0.3];
+      baseTargetRef.current = introTarget;
+
+      const proxy = { t: 0 };
+      isAnimatingRef.current = true;
+
+      const tl = gsap.timeline({
+        onUpdate: () => {
+          const p = proxy.t;
+          camera.position.set(
+            THREE.MathUtils.lerp(startPos.x, introPos[0], p),
+            THREE.MathUtils.lerp(startPos.y, introPos[1], p),
+            THREE.MathUtils.lerp(startPos.z, introPos[2], p)
+          );
+          if (controlsRef.current) {
+            controlsRef.current.target.set(
+              THREE.MathUtils.lerp(startTarget.x, introTarget[0], p),
+              THREE.MathUtils.lerp(startTarget.y, introTarget[1], p),
+              THREE.MathUtils.lerp(startTarget.z, introTarget[2], p)
+            );
+            controlsRef.current.update();
+          }
+        },
+        onComplete: () => {
+          isAnimatingRef.current = false;
+        }
+      });
+
+      tl.to(proxy, {
+        t: 1,
+        duration: reducedMotion ? 0.4 : 1.3,
+        ease: 'power3.inOut'
+      });
+    }
+    prevEnteredRef.current = hasEntered;
+  }, [hasEntered, isMobile, camera, reducedMotion]);
 
   // Terbang kamera ke wilayah terpilih
   useEffect(() => {
