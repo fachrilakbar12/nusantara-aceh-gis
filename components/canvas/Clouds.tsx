@@ -16,12 +16,12 @@ interface CloudSpec {
 }
 
 const CLOUD_SPECS: CloudSpec[] = [
-  { baseX: -5.2, y: 2.35, z: -4.2, scaleX: 0.72, scaleY: 0.16, scaleZ: 0.42, speed: 0.08 },
-  { baseX: -1.4, y: 2.55, z: -4.8, scaleX: 0.9, scaleY: 0.18, scaleZ: 0.48, speed: 0.065 },
-  { baseX: 3.1, y: 2.4, z: -3.6, scaleX: 0.78, scaleY: 0.15, scaleZ: 0.44, speed: 0.075 },
-  { baseX: -4.5, y: 2.25, z: 1.8, scaleX: 0.68, scaleY: 0.15, scaleZ: 0.38, speed: 0.09 },
-  { baseX: 2.6, y: 2.5, z: 2.7, scaleX: 0.85, scaleY: 0.17, scaleZ: 0.46, speed: 0.07 },
-  { baseX: 5.0, y: 2.3, z: -0.6, scaleX: 0.64, scaleY: 0.14, scaleZ: 0.36, speed: 0.085 }
+  { baseX: -5.2, y: 2.35, z: -4.2, scaleX: 0.72, scaleY: 0.08, scaleZ: 0.28, speed: 0.08 },
+  { baseX: -1.4, y: 2.55, z: -4.8, scaleX: 0.92, scaleY: 0.09, scaleZ: 0.32, speed: 0.065 },
+  { baseX: 3.1, y: 2.4, z: -3.6, scaleX: 0.78, scaleY: 0.08, scaleZ: 0.3, speed: 0.075 },
+  { baseX: -4.5, y: 2.25, z: 1.8, scaleX: 0.68, scaleY: 0.08, scaleZ: 0.26, speed: 0.09 },
+  { baseX: 2.6, y: 2.5, z: 2.7, scaleX: 0.85, scaleY: 0.09, scaleZ: 0.32, speed: 0.07 },
+  { baseX: 5.0, y: 2.3, z: -0.6, scaleX: 0.64, scaleY: 0.08, scaleZ: 0.25, speed: 0.085 }
 ];
 
 export default function Clouds({ reducedMotion }: { reducedMotion: boolean }) {
@@ -29,7 +29,8 @@ export default function Clouds({ reducedMotion }: { reducedMotion: boolean }) {
   const birdsGroupRef = useRef<THREE.Group>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const cloudGeo = useMemo(() => new THREE.DodecahedronGeometry(0.6, 0), []);
+  // Awan potongan kertas datar (BoxGeometry, bukan bola/bulatan)
+  const cloudGeo = useMemo(() => new THREE.BoxGeometry(0.95, 0.35, 0.65), []);
   const cloudMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -82,7 +83,7 @@ export default function Clouds({ reducedMotion }: { reducedMotion: boolean }) {
         const bobY = c.y + Math.sin(t * 0.8 + i * 1.4) * 0.035;
         dummy.position.set(driftX, bobY, c.z);
         dummy.scale.set(c.scaleX, c.scaleY, c.scaleZ);
-        dummy.rotation.y = i * 0.6;
+        dummy.rotation.y = 0.25;
         dummy.updateMatrix();
         instancedRef.current!.setMatrixAt(i, dummy.matrix);
       });
@@ -137,4 +138,3 @@ export default function Clouds({ reducedMotion }: { reducedMotion: boolean }) {
     </group>
   );
 }
-

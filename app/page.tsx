@@ -83,6 +83,24 @@ export default function HomePage() {
       {/* Adegan 3D Peta Timbul Aceh */}
       <Scene />
 
+      {/* Efek Miniatur (Tilt-Shift) pada bagian atas & bawah layar (tanpa gradasi) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-10 flex flex-col"
+      >
+        <div className="h-[3.5vh] w-full backdrop-blur-[5px]" />
+        <div className="h-[3vh] w-full backdrop-blur-[2.5px]" />
+        <div className="h-[2.5vh] w-full backdrop-blur-[1px]" />
+      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-10 flex flex-col"
+      >
+        <div className="h-[2.5vh] w-full backdrop-blur-[1px]" />
+        <div className="h-[3vh] w-full backdrop-blur-[2.5px]" />
+        <div className="h-[3.5vh] w-full backdrop-blur-[5px]" />
+      </div>
+
       {/* Header Navigasi Atas */}
       <Header />
 

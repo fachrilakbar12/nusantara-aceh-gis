@@ -1,6 +1,9 @@
 import { InstrumenKlik, REGION_BY_ID } from './regions';
 
 const BUNGONG_JEUMPA_PATH = '/audio/bungong-jeumpa.mp3';
+// Lewati keheningan awal 2.4 detik & akhir 3:33.2 agar melodi langsung terdengar dan loop mulus
+const TRACK_START_OFFSET = 2.4;
+const TRACK_LOOP_END = 213.2;
 
 class NusantaraAudioEngine {
   private ctx: AudioContext | null = null;
@@ -10,8 +13,9 @@ class NusantaraAudioEngine {
   private bgSource: MediaElementAudioSourceNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private isMuted = false;
-  private volume = 0.75;
+  private volume = 0.78;
   private lastHoverAt = 0;
+  private bgStarted = false;
 
   private ensureContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -43,62 +47,93 @@ class NusantaraAudioEngine {
   }
 
   /**
-   * Dipanggil saat pengguna menekan tombol "Masuk".
-   * Memeriksa keberadaan /audio/bungong-jeumpa.mp3; jika tersedia, putar loop dengan fade-in 2 detik.
-   * Jika tidak tersedia, panggil callback onMissingFile untuk menampilkan toast tanpa error.
+   * Memastikan musik latar /audio/bungong-jeumpa.mp3 berputar dengan fade-in 2 detik
    */
-  public async startExperience(onMissingFile: (msg: string) => void): Promise<void> {
+  private initAndPlayBgMusic(onMissingFile?: (msg: string) => void): void {
     const ctx = this.ensureContext();
     if (!ctx || !this.masterGain) return;
 
-    try {
-      const res = await fetch(BUNGONG_JEUMPA_PATH, { method: 'HEAD' });
-      const contentType = res.headers.get('content-type') || '';
-      const contentLength = Number(res.headers.get('content-length') || '0');
-      const exists = res.ok && !contentType.includes('text/html') && contentLength > 256;
+    if (!this.bgAudio) {
+      const audio = new Audio(BUNGONG_JEUMPA_PATH);
+      audio.loop = true;
+      audio.preload = 'auto';
 
-      if (!exists) {
-        onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
-        return;
-      }
+      audio.addEventListener('loadedmetadata', () => {
+        if (audio.currentTime < TRACK_START_OFFSET) {
+          audio.currentTime = TRACK_START_OFFSET;
+        }
+      });
 
-      if (!this.bgAudio) {
-        const audio = new Audio(BUNGONG_JEUMPA_PATH);
-        audio.loop = true;
-        audio.preload = 'auto';
-        audio.crossOrigin = 'anonymous';
+      audio.addEventListener('timeupdate', () => {
+        if (audio.currentTime >= TRACK_LOOP_END) {
+          audio.currentTime = TRACK_START_OFFSET;
+          if (audio.paused && !this.isMuted) {
+            void audio.play().catch(() => {});
+          }
+        }
+      });
 
-        const fadeGain = ctx.createGain();
-        fadeGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      const fadeGain = ctx.createGain();
+      fadeGain.gain.setValueAtTime(0.0001, ctx.currentTime);
 
-        const source = ctx.createMediaElementSource(audio);
-        source.connect(fadeGain);
-        fadeGain.connect(this.masterGain);
+      const source = ctx.createMediaElementSource(audio);
+      source.connect(fadeGain);
+      fadeGain.connect(this.masterGain);
 
-        this.bgAudio = audio;
-        this.bgSource = source;
-        this.bgFadeGain = fadeGain;
-      }
-
-      await this.bgAudio.play();
-      if (this.bgFadeGain) {
-        const now = ctx.currentTime;
-        this.bgFadeGain.gain.cancelScheduledValues(now);
-        this.bgFadeGain.gain.setValueAtTime(0.0001, now);
-        this.bgFadeGain.gain.linearRampToValueAtTime(0.45, now + 2.0);
-      }
-    } catch {
-      onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
+      this.bgAudio = audio;
+      this.bgSource = source;
+      this.bgFadeGain = fadeGain;
     }
+
+    if (this.bgAudio.paused) {
+      try {
+        if (this.bgAudio.readyState >= 1 && this.bgAudio.currentTime < TRACK_START_OFFSET) {
+          this.bgAudio.currentTime = TRACK_START_OFFSET;
+        }
+      } catch {
+        // Abaikan bila metadata belum siap
+      }
+
+      this.bgAudio
+        .play()
+        .then(() => {
+          this.bgStarted = true;
+          if (this.bgFadeGain && this.ctx) {
+            const now = this.ctx.currentTime;
+            this.bgFadeGain.gain.cancelScheduledValues(now);
+            this.bgFadeGain.gain.setValueAtTime(0.0001, now);
+            this.bgFadeGain.gain.linearRampToValueAtTime(0.62, now + 2.0);
+          }
+        })
+        .catch(() => {
+          if (onMissingFile) {
+            onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
+          }
+        });
+    }
+  }
+
+  /**
+   * Dipanggil saat pengguna menekan tombol "Masuk".
+   * Memutar /audio/bungong-jeumpa.mp3 secara langsung dalam konteks klik pengguna dengan fade-in 2 detik.
+   */
+  public startExperience(onMissingFile: (msg: string) => void): void {
+    this.initAndPlayBgMusic(onMissingFile);
   }
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
+    if (!muted && !this.bgStarted) {
+      this.initAndPlayBgMusic();
+    }
     this.applyMasterGain();
   }
 
   public setVolume(vol: number): void {
     this.volume = Math.max(0, Math.min(1, vol));
+    if (this.volume > 0 && !this.bgStarted) {
+      this.initAndPlayBgMusic();
+    }
     this.applyMasterGain();
   }
 
@@ -129,7 +164,7 @@ class NusantaraAudioEngine {
     osc.frequency.setValueAtTime(980, t);
     osc.frequency.exponentialRampToValueAtTime(1420, t + 0.028);
 
-    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.setValueAtTime(0.07, t);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
 
     osc.connect(gain);
@@ -173,6 +208,9 @@ class NusantaraAudioEngine {
    * Bunyi klik wilayah sesuai kelompok budaya Aceh
    */
   public playRegionClick(regionId: string): void {
+    if (!this.bgStarted && !this.isMuted) {
+      this.initAndPlayBgMusic();
+    }
     if (this.isMuted) return;
     const region = REGION_BY_ID[regionId];
     const instrumen: InstrumenKlik = region ? region.instrumenKlik : 'rapai';

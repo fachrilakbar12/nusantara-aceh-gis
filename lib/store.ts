@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { REGIONS_ACEH } from './regions';
 
+export type LightingMode = 'malam' | 'senja' | 'siang';
+
 export interface RippleEvent {
   id: number;
   x: number;
@@ -20,6 +22,8 @@ interface AcehStoreState {
   searchQuery: string;
   toastMessage: string | null;
   rippleEvent: RippleEvent | null;
+  lightingMode: LightingMode;
+  isTourPlaying: boolean;
 
   setEntered: (entered: boolean) => void;
   selectRegion: (regionId: string | null) => void;
@@ -35,6 +39,8 @@ interface AcehStoreState {
   showToast: (msg: string) => void;
   dismissToast: () => void;
   triggerRipple: (x: number, z: number, color: string) => void;
+  setLightingMode: (mode: LightingMode) => void;
+  setTourPlaying: (playing: boolean) => void;
 }
 
 export const useAcehStore = create<AcehStoreState>((set, get) => ({
@@ -43,12 +49,14 @@ export const useAcehStore = create<AcehStoreState>((set, get) => ({
   hoveredRegionId: null,
   hoverPointer: { x: 0, y: 0 },
   isMuted: false,
-  volume: 0.75,
+  volume: 0.78,
   isDrawerOpen: false,
   isCreditsOpen: false,
   searchQuery: '',
   toastMessage: null,
   rippleEvent: null,
+  lightingMode: 'malam',
+  isTourPlaying: false,
 
   setEntered: (entered) => set({ hasEntered: entered }),
 
@@ -102,5 +110,9 @@ export const useAcehStore = create<AcehStoreState>((set, get) => ({
         z,
         color
       }
-    })
+    }),
+
+  setLightingMode: (mode) => set({ lightingMode: mode }),
+
+  setTourPlaying: (playing) => set({ isTourPlaying: playing })
 }));

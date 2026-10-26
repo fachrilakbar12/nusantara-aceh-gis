@@ -29,7 +29,13 @@ export interface GeoJSONFeatureCollection {
 
 export interface ProcessedRegionGeometry {
   id: string;
+  // Geometri 3 lapisan diorama kertas (papercut)
   geometry: THREE.ExtrudeGeometry;
+  layerBaseGeometry: THREE.ExtrudeGeometry;
+  layerMiddleGeometry: THREE.ExtrudeGeometry;
+  layerTopGeometry: THREE.ExtrudeGeometry;
+  baseOutlinePositions: Float32Array;
+  middleOutlinePositions: Float32Array;
   topOutlinePositions: Float32Array;
   centroid: [number, number]; // [worldX, worldZ]
   boundsRadius: number;
@@ -41,7 +47,12 @@ const ACEH_CENTER_LAT = 4.15;
 const MAP_SCALE = 2.65;
 const COS_LAT = Math.cos((ACEH_CENTER_LAT * Math.PI) / 180);
 
-export const BASE_EXTRUDE_HEIGHT = 0.25;
+// Ketebalan tiap lapisan diorama kertas (papercut)
+export const LAYER_BASE_HEIGHT = 0.11;
+export const LAYER_MIDDLE_HEIGHT = 0.10;
+export const LAYER_TOP_HEIGHT = 0.09;
+export const BASE_EXTRUDE_HEIGHT =
+  LAYER_BASE_HEIGHT + LAYER_MIDDLE_HEIGHT + LAYER_TOP_HEIGHT; // 0.30
 export const HOVER_EXTRUDE_OFFSET = 0.35;
 
 const CENTROID_REGISTRY: Record<string, [number, number]> = {};
@@ -193,9 +204,19 @@ function sanitizeProjectedRing(ring: Position2D[]): Position2D[] {
   return cleaned;
 }
 
+function scaleRingAroundCenter(
+  ring: Position2D[],
+  cx: number,
+  cy: number,
+  scale: number
+): Position2D[] {
+  if (Math.abs(scale - 1) < 1e-5) return ring;
+  return ring.map(([x, y]) => [cx + (x - cx) * scale, cy + (y - cy) * scale]);
+}
+
 /**
  * Mengubah satu fitur GeoJSON (Polygon atau MultiPolygon beserta holes)
- * menjadi THREE.ExtrudeGeometry dengan tinggi dasar 0.25 dan bevel halus.
+ * menjadi 3 lapisan THREE.ExtrudeGeometry bergaya diorama kertas (papercut).
  */
 export function buildRegionExtrudeGeometry(
   feature: GeoJSONFeature,
@@ -206,16 +227,52 @@ export function buildRegionExtrudeGeometry(
       ? [feature.geometry.coordinates]
       : feature.geometry.coordinates;
 
-  const shapes: THREE.Shape[] = [];
-  const outlineSegments: number[] = [];
+  const baseShapes: THREE.Shape[] = [];
+  const middleShapes: THREE.Shape[] = [];
+  const topShapes: THREE.Shape[] = [];
+
+  const baseOutlineSegments: number[] = [];
+  const middleOutlineSegments: number[] = [];
+  const topOutlineSegments: number[] = [];
 
   let largestArea = -1;
   let mainCentroidX = 0;
   let mainCentroidY = 0;
+
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
+
+  const buildShapeFromRings = (
+    outerRing: Position2D[],
+    holeRings: Position2D[][],
+    outlineOut: number[],
+    outlineY: number
+  ): THREE.Shape => {
+    const shape = new THREE.Shape();
+    outerRing.forEach(([x, y], idx) => {
+      if (idx === 0) shape.moveTo(x, y);
+      else shape.lineTo(x, y);
+
+      const next = outerRing[(idx + 1) % outerRing.length];
+      outlineOut.push(x, outlineY, -y);
+      outlineOut.push(next[0], outlineY, -next[1]);
+    });
+    shape.closePath();
+
+    for (const hRing of holeRings) {
+      if (hRing.length < 3) continue;
+      const holePath = new THREE.Path();
+      hRing.forEach(([hx, hy], idx) => {
+        if (idx === 0) holePath.moveTo(hx, hy);
+        else holePath.lineTo(hx, hy);
+      });
+      holePath.closePath();
+      shape.holes.push(holePath);
+    }
+    return shape;
+  };
 
   for (const poly of polygons) {
     if (!poly || poly.length === 0) continue;
@@ -228,77 +285,102 @@ export function buildRegionExtrudeGeometry(
     );
     if (projectedOuter.length < 3) continue;
 
+    for (const [x, y] of projectedOuter) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+
     const { area, cx, cy } = computeRingSignedAreaAndCentroid(projectedOuter);
+
+    const projectedHoles: Position2D[][] = [];
+    for (let h = 1; h < poly.length; h++) {
+      const holeRingRaw = poly[h];
+      if (!holeRingRaw || holeRingRaw.length < 3) continue;
+      const cleanHole = sanitizeProjectedRing(
+        holeRingRaw.map(([lon, lat]) => projectLonLat(lon, lat))
+      );
+      if (cleanHole.length >= 3) {
+        projectedHoles.push(cleanHole);
+      }
+    }
+
+    // Lapisan Dasar (Base Layer - 100%)
+    baseShapes.push(
+      buildShapeFromRings(
+        projectedOuter,
+        projectedHoles,
+        baseOutlineSegments,
+        LAYER_BASE_HEIGHT + 0.015
+      )
+    );
+
+    // Lapisan Tengah (Middle Layer - 90% inset ke pusat poligon untuk efek potongan kertas)
+    const middleOuter = scaleRingAroundCenter(projectedOuter, cx, cy, 0.90);
+    const middleHoles = projectedHoles.map((hr) => scaleRingAroundCenter(hr, cx, cy, 0.90));
+    middleShapes.push(
+      buildShapeFromRings(
+        middleOuter,
+        middleHoles,
+        middleOutlineSegments,
+        LAYER_MIDDLE_HEIGHT + 0.015
+      )
+    );
+
+    // Lapisan Atas (Top Layer - 80% inset ke pusat poligon)
+    const topOuter = scaleRingAroundCenter(projectedOuter, cx, cy, 0.80);
+    const topHoles = projectedHoles.map((hr) => scaleRingAroundCenter(hr, cx, cy, 0.80));
+    topShapes.push(
+      buildShapeFromRings(
+        topOuter,
+        topHoles,
+        topOutlineSegments,
+        LAYER_TOP_HEIGHT + 0.015
+      )
+    );
+
     if (area > largestArea) {
       largestArea = area;
       mainCentroidX = cx;
       mainCentroidY = cy;
     }
-
-    const shape = new THREE.Shape();
-    projectedOuter.forEach(([x, y], idx) => {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-
-      if (idx === 0) {
-        shape.moveTo(x, y);
-      } else {
-        shape.lineTo(x, y);
-      }
-
-      const next = projectedOuter[(idx + 1) % projectedOuter.length];
-      // Garis tepi permukaan atas pada bidang XZ dunia
-      outlineSegments.push(x, BASE_EXTRUDE_HEIGHT + 0.03, -y);
-      outlineSegments.push(next[0], BASE_EXTRUDE_HEIGHT + 0.03, -next[1]);
-    });
-    shape.closePath();
-
-    // Tangani lubang (holes) jika ada pada Polygon
-    for (let h = 1; h < poly.length; h++) {
-      const holeRingRaw = poly[h];
-      if (!holeRingRaw || holeRingRaw.length < 3) continue;
-      const projectedHole = sanitizeProjectedRing(
-        holeRingRaw.map(([lon, lat]) => projectLonLat(lon, lat))
-      );
-      if (projectedHole.length < 3) continue;
-      const holePath = new THREE.Path();
-      projectedHole.forEach(([hx, hy], idx) => {
-        if (idx === 0) {
-          holePath.moveTo(hx, hy);
-        } else {
-          holePath.lineTo(hx, hy);
-        }
-      });
-      holePath.closePath();
-      shape.holes.push(holePath);
-    }
-
-    shapes.push(shape);
   }
 
-  const extrudeSettings: THREE.ExtrudeGeometryOptions = {
-    depth: BASE_EXTRUDE_HEIGHT,
-    bevelEnabled: true,
-    bevelThickness: 0.025,
-    bevelSize: 0.016,
-    bevelOffset: 0,
-    bevelSegments: 2,
-    curveSegments: 4
+  const makePaperExtrude = (
+    shapes: THREE.Shape[],
+    depth: number
+  ): THREE.ExtrudeGeometry => {
+    const geom = new THREE.ExtrudeGeometry(shapes, {
+      depth,
+      bevelEnabled: true,
+      bevelThickness: 0.012,
+      bevelSize: 0.009,
+      bevelOffset: 0,
+      bevelSegments: 1,
+      curveSegments: 3
+    });
+    geom.computeVertexNormals();
+    return geom;
   };
 
-  const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
-  geometry.computeVertexNormals();
+  const layerBaseGeometry = makePaperExtrude(baseShapes, LAYER_BASE_HEIGHT);
+  const layerMiddleGeometry = makePaperExtrude(middleShapes, LAYER_MIDDLE_HEIGHT);
+  const layerTopGeometry = makePaperExtrude(topShapes, LAYER_TOP_HEIGHT);
 
   const spanX = Number.isFinite(maxX - minX) ? maxX - minX : 0.5;
   const spanY = Number.isFinite(maxY - minY) ? maxY - minY : 0.5;
-  const boundsRadius = Math.max(0.25, Math.hypot(spanX, spanY) * 0.5);
+  const boundsRadius = Math.max(0.18, Math.hypot(spanX, spanY) * 0.5);
 
   return {
     id: regionId,
-    geometry,
-    topOutlinePositions: new Float32Array(outlineSegments),
+    geometry: layerBaseGeometry,
+    layerBaseGeometry,
+    layerMiddleGeometry,
+    layerTopGeometry,
+    baseOutlinePositions: new Float32Array(baseOutlineSegments),
+    middleOutlinePositions: new Float32Array(middleOutlineSegments),
+    topOutlinePositions: new Float32Array(topOutlineSegments),
     centroid: [mainCentroidX, -mainCentroidY],
     boundsRadius
   };

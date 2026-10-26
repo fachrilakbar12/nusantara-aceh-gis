@@ -10,6 +10,7 @@ export type InstrumenKlik =
   | 'rebana-tamiang';
 
 export type JenisLandmark =
+  | 'masjid-baiturrahman'
   | 'rumoh-aceh'
   | 'tugu-nol'
   | 'cangkir-kopi'
@@ -20,6 +21,19 @@ export type JenisLandmark =
   | 'padi-sigupai'
   | 'rebana-melayu'
   | 'gong-alas';
+
+export type JenisMotifAceh =
+  | 'pucok-reubong'
+  | 'bungong-jeumpa'
+  | 'emun-berangkat'
+  | 'pinto-aceh'
+  | 'bungong-seulanga';
+
+export interface InfoMotifAceh {
+  jenis: JenisMotifAceh;
+  nama: string;
+  makna: string;
+}
 
 export type StatusVerifikasi = 'Terverifikasi' | 'Data sedang dilengkapi';
 
@@ -66,7 +80,7 @@ export const REGIONS_ACEH: WilayahAceh[] = [
     jenis: 'kota',
     warna: REGION_COLORS['banda-aceh'],
     instrumenKlik: 'rapai',
-    landmark: 'rumoh-aceh',
+    landmark: 'masjid-baiturrahman',
     status: 'Terverifikasi',
     budaya: [
       {
@@ -557,4 +571,132 @@ export const REGIONS_ACEH: WilayahAceh[] = [
 export const REGION_BY_ID: Record<string, WilayahAceh> = Object.fromEntries(
   REGIONS_ACEH.map((r) => [r.id, r])
 );
+
+export const MOTIF_ACEH_BY_REGION: Record<string, InfoMotifAceh> = {
+  'banda-aceh': {
+    jenis: 'bungong-jeumpa',
+    nama: 'Motif Bungong Jeumpa',
+    makna: 'Kelopak bunga cempaka Aceh yang melambangkan keharuman adab dan kemuliaan budaya.'
+  },
+  sabang: {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong',
+    makna: 'Tunas bambu segitiga khas Aceh sebagai simbol keteguhan dan pertumbuhan masyarakat bahari.'
+  },
+  'aceh-besar': {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong',
+    makna: 'Ragam hias pucuk rebung khas songket dan ukiran kayu Aceh Besar.'
+  },
+  pidie: {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong',
+    makna: 'Pola geometris tunas bambu Aceh yang melambangkan kemandirian dan keteguhan hati.'
+  },
+  'pidie-jaya': {
+    jenis: 'bungong-jeumpa',
+    nama: 'Motif Bungong Jeumpa',
+    makna: 'Ornamen bunga jeumpa yang menghiasi busana penari dan kriya pesisir timur.'
+  },
+  bireuen: {
+    jenis: 'bungong-jeumpa',
+    nama: 'Motif Bungong Jeumpa',
+    makna: 'Ragam hias kelopak bunga jeumpa yang lekat dengan identitas kultural kawasan Jeumpa.'
+  },
+  'aceh-utara': {
+    jenis: 'pinto-aceh',
+    nama: 'Motif Pinto Aceh',
+    makna: 'Ornamen lengkung gerbang khas Aceh yang melambangkan keterbukaan dan warisan sejarah.'
+  },
+  lhokseumawe: {
+    jenis: 'bungong-jeumpa',
+    nama: 'Motif Bungong Jeumpa',
+    makna: 'Susunan kelopak bunga jeumpa simetris khas kriya pesisir utara Aceh.'
+  },
+  'aceh-timur': {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong',
+    makna: 'Deretan segitiga pucuk rebung yang mencerminkan keselarasan adat pesisir timur.'
+  },
+  langsa: {
+    jenis: 'bungong-seulanga',
+    nama: 'Motif Bungong Seulanga',
+    makna: 'Kelopak bunga kenanga Aceh yang melambangkan keramahan dan keharmonisan warga.'
+  },
+  'aceh-tamiang': {
+    jenis: 'bungong-seulanga',
+    nama: 'Motif Tampok Manggis & Seulanga',
+    makna: 'Geometri roset bunga pesisir timur yang berpadu dengan khazanah Melayu Tamiang.'
+  },
+  'aceh-tengah': {
+    jenis: 'emun-berangkat',
+    nama: 'Motif Kerawang Gayo (Emun Berangkat)',
+    makna: 'Motif awan berarak khas Kerawang Gayo yang melambangkan persatuan dan cita-cita luhur.'
+  },
+  'bener-meriah': {
+    jenis: 'emun-berangkat',
+    nama: 'Motif Kerawang Gayo (Emun Berangkat)',
+    makna: 'Ornamen geometris Kerawang Gayo dataran tinggi yang sarat falsafah hidup serumpun.'
+  },
+  'gayo-lues': {
+    jenis: 'emun-berangkat',
+    nama: 'Motif Kerawang Gayo (Pucuk Rebung & Emun)',
+    makna: 'Pola geometris Kerawang Gayo pada busana penari Saman Gayo Lues.'
+  },
+  'aceh-tenggara': {
+    jenis: 'emun-berangkat',
+    nama: 'Motif Mesikhat & Pucuk Rebung Alas',
+    makna: 'Ragam hias geometris tenun dan busana adat masyarakat suku Alas di Kutacane.'
+  },
+  'aceh-singkil': {
+    jenis: 'bungong-seulanga',
+    nama: 'Motif Bintang & Bunga Adat Singkil',
+    makna: 'Ornamen roset simetris pada busana adat tradisional wilayah Singkil.'
+  },
+  subulussalam: {
+    jenis: 'bungong-seulanga',
+    nama: 'Motif Roset Harmoni Rundeng',
+    makna: 'Ragam hias kelopak simetris yang melambangkan kebersamaan adat setempat.'
+  },
+  'aceh-selatan': {
+    jenis: 'pinto-aceh',
+    nama: 'Motif Pinto Aceh & Pucok Reubong',
+    makna: 'Perpaduan gerbang lengkung Pinto Aceh dan pucuk rebung khas pantai barat-selatan.'
+  },
+  'aceh-barat-daya': {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong Sigupai',
+    makna: 'Tunas bambu bertingkat yang melambangkan kesuburan bumi Breuh Sigupai.'
+  },
+  'nagan-raya': {
+    jenis: 'pinto-aceh',
+    nama: 'Motif Pinto Aceh',
+    makna: 'Siluet gerbang kemuliaan adat Aceh pada kriya dan arsitektur tradisional.'
+  },
+  'aceh-barat': {
+    jenis: 'pinto-aceh',
+    nama: 'Motif Pinto Aceh & Kupiah Meuketop',
+    makna: 'Geometri simetris khas ragam hias Meulaboh dan pantai barat Aceh.'
+  },
+  'aceh-jaya': {
+    jenis: 'bungong-jeumpa',
+    nama: 'Motif Bungong Jeumpa & Cinkhui',
+    makna: 'Ornamen bunga tradisional Aceh pada sulaman dan kriya pesisir barat.'
+  },
+  simeulue: {
+    jenis: 'pucok-reubong',
+    nama: 'Motif Pucok Reubong Kepulauan',
+    makna: 'Geometri segitiga bertingkat sebagai lambang ketangguhan masyarakat kepulauan Simeulue.'
+  }
+};
+
+export function getMotifForRegion(regionId: string): InfoMotifAceh {
+  return (
+    MOTIF_ACEH_BY_REGION[regionId] || {
+      jenis: 'pucok-reubong',
+      nama: 'Motif Pucok Reubong',
+      makna: 'Ragam hias tradisional Aceh berbentuk tunas bambu.'
+    }
+  );
+}
 

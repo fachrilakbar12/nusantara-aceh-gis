@@ -15,17 +15,14 @@ export default function Tooltip() {
   return (
     <div
       role="tooltip"
-      className="pointer-events-none fixed z-40 flex items-center gap-2 rounded-lg border bg-[#121a2b] px-3 py-1.5 text-xs font-medium text-[#f3efe6]"
+      className="pointer-events-none fixed z-40 flex items-center gap-2 rounded-lg border border-l-4 bg-[#121a2b] px-3 py-1.5 text-xs font-medium text-[#f3efe6]"
       style={{
         left: `${hoverPointer.x + 14}px`,
         top: `${hoverPointer.y - 34}px`,
-        borderColor: region.warna
+        borderColor: region.warna,
+        borderLeftColor: region.warna
       }}
     >
-      <span
-        className="h-2.5 w-2.5 rounded-sm"
-        style={{ backgroundColor: region.warna }}
-      />
       <span>{region.nama}</span>
       <span className="text-[10px] capitalize text-[#93a0ba]">
         ({region.jenis})
@@ -33,4 +30,3 @@ export default function Tooltip() {
     </div>
   );
 }
-

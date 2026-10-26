@@ -42,6 +42,7 @@ export default function RegionList() {
       triggerRipple(centroid[0], centroid[1], warna);
     }
     audioEngine.playRegionClick(id);
+    // Di mobile, tutup drawer otomatis setelah memilih wilayah
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setDrawerOpen(false);
     }
@@ -50,15 +51,15 @@ export default function RegionList() {
   return (
     <aside
       aria-label="Daftar 23 wilayah Aceh"
-      className="fixed bottom-11 right-4 top-16 z-30 flex w-[calc(100vw-2rem)] max-w-xs flex-col rounded-2xl border-2 bg-[#121a2b] p-4 transition-colors duration-300 md:right-6 md:top-20"
+      className="fixed inset-x-3 bottom-3 top-14 z-40 flex flex-col rounded-3xl border-2 bg-[#121a2b]/95 p-4 shadow-2xl backdrop-blur-md transition-colors duration-300 sm:bottom-24 sm:right-6 sm:top-20 sm:max-w-xs md:inset-x-auto md:w-80"
       style={{ borderColor: accentColor }}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 border-b border-[#25324d] pb-2.5">
         <div>
           <h2 className="font-display text-base font-bold text-[#f3efe6]">
             Daftar 23 Wilayah
           </h2>
-          <p className="text-[11px] text-[#93a0ba]">
+          <p className="text-[10px] text-[#93a0ba] sm:text-[11px]">
             18 Kabupaten &amp; 5 Kota di Aceh
           </p>
         </div>
@@ -66,7 +67,7 @@ export default function RegionList() {
           type="button"
           onClick={() => setDrawerOpen(false)}
           aria-label="Tutup daftar wilayah"
-          className="rounded-lg border border-[#25324d] bg-[#0b1220] px-2.5 py-1 text-xs text-[#93a0ba] hover:text-[#f3efe6]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#25324d] bg-[#0b1220] text-xs text-[#93a0ba] hover:text-[#f3efe6]"
         >
           ✕
         </button>
@@ -80,7 +81,7 @@ export default function RegionList() {
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Cari wilayah, tarian, atau kuliner…"
           aria-label="Cari wilayah atau budaya Aceh"
-          className="w-full rounded-xl border border-[#25324d] bg-[#0b1220] px-3 py-2 text-xs text-[#f3efe6] placeholder-[#93a0ba] focus:border-[#f3efe6] focus:outline-none"
+          className="w-full rounded-2xl border border-[#25324d] bg-[#0b1220] px-3.5 py-2.5 text-xs text-[#f3efe6] placeholder-[#93a0ba] focus:border-[#f3efe6] focus:outline-none"
         />
       </div>
 
@@ -98,35 +99,33 @@ export default function RegionList() {
                 key={item.id}
                 type="button"
                 onClick={() => handlePickRegion(item.id, item.warna)}
-                className="flex w-full items-center justify-between gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors duration-200 hover:bg-[#182238]"
+                className="flex w-full items-center justify-between gap-2.5 rounded-2xl border px-3 py-2 text-left transition-all duration-200 active:scale-[0.98] sm:px-3.5 sm:py-2.5"
                 style={{
                   borderColor: isSelected ? item.warna : '#25324d',
                   backgroundColor: isSelected ? '#182238' : '#0b1220'
                 }}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="min-w-0 truncate">
                   <span
-                    className="h-3 w-3 shrink-0 rounded-sm"
-                    style={{ backgroundColor: item.warna }}
-                  />
-                  <div className="truncate">
-                    <span className="block truncate text-xs font-semibold text-[#f3efe6]">
-                      {item.nama}
-                    </span>
-                    <span className="block text-[10px] capitalize text-[#93a0ba]">
-                      {item.jenis} · {item.budaya.length} catatan budaya
-                    </span>
-                  </div>
+                    className="block truncate text-xs font-semibold"
+                    style={{ color: isSelected ? item.warna : '#f3efe6' }}
+                  >
+                    {item.nama}
+                  </span>
+                  <span className="block text-[10px] capitalize text-[#93a0ba]">
+                    {item.jenis} — {item.budaya.length} budaya
+                  </span>
                 </div>
 
                 <span
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                  className="shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-medium"
                   style={{
+                    borderColor: isSelected ? item.warna : '#25324d',
                     backgroundColor: '#121a2b',
                     color: item.status === 'Terverifikasi' ? '#2ec4b6' : '#ffb347'
                   }}
                 >
-                  {item.status === 'Terverifikasi' ? '✓' : '•'}
+                  {item.status === 'Terverifikasi' ? '✓' : '—'}
                 </span>
               </button>
             );
@@ -136,4 +135,3 @@ export default function RegionList() {
     </aside>
   );
 }
-

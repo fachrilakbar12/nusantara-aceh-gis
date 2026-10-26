@@ -3,14 +3,65 @@
 import React, { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { THEME_COLORS } from '@/lib/colors';
-import { useAcehStore } from '@/lib/store';
+import { LightingMode, useAcehStore } from '@/lib/store';
 import AcehMap from './AcehMap';
 import Sea from './Sea';
 import Clouds from './Clouds';
 import CameraRig from './CameraRig';
 
+const LIGHTING_PRESETS: Record<
+  LightingMode,
+  {
+    bg: string;
+    hemiSky: string;
+    hemiGround: string;
+    hemiIntensity: number;
+    keyPos: [number, number, number];
+    keyColor: string;
+    keyIntensity: number;
+    rimColor: string;
+    rimIntensity: number;
+  }
+> = {
+  malam: {
+    bg: THEME_COLORS.bg,
+    hemiSky: '#fff4e0',
+    hemiGround: '#162847',
+    hemiIntensity: 0.72,
+    keyPos: [5.2, 9.2, 4.6],
+    keyColor: '#ffe6c2',
+    keyIntensity: 1.65,
+    rimColor: '#4cc9f0',
+    rimIntensity: 0.85
+  },
+  senja: {
+    bg: '#141326',
+    hemiSky: '#ffb347',
+    hemiGround: '#241938',
+    hemiIntensity: 0.78,
+    keyPos: [-6.8, 5.4, 5.2], // Sudut matahari sore rendah untuk bayangan jatuh memanjang
+    keyColor: '#ff9f43',
+    keyIntensity: 1.9,
+    rimColor: '#c77dff',
+    rimIntensity: 0.92
+  },
+  siang: {
+    bg: '#10243e',
+    hemiSky: '#ffffff',
+    hemiGround: '#1d3b66',
+    hemiIntensity: 0.95,
+    keyPos: [4.5, 10.5, 5.5],
+    keyColor: '#fffaf0',
+    keyIntensity: 1.85,
+    rimColor: '#90e0ef',
+    rimIntensity: 0.75
+  }
+};
+
 export default function Scene() {
   const [reducedMotion, setReducedMotion] = useState(false);
+  const lightingMode = useAcehStore((s) => s.lightingMode);
+  const preset = LIGHTING_PRESETS[lightingMode];
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -22,42 +73,49 @@ export default function Scene() {
   }, []);
 
   return (
-    <div className="absolute inset-0 z-0 h-full w-full bg-[#0b1220]">
+    <div
+      className="absolute inset-0 z-0 h-full w-full transition-colors duration-700"
+      style={{ backgroundColor: preset.bg }}
+    >
       <Canvas
-        shadows
+        shadows="soft"
         dpr={[1, 2]}
         frameloop="always"
-        camera={{ position: [0, 6.1, 4.35], fov: 40, near: 0.1, far: 45 }}
+        camera={{ position: [-4.6, 2.7, 7.4], fov: 35, near: 0.1, far: 45 }}
         onPointerMissed={() => {
-          useAcehStore.getState().selectRegion(null);
+          const store = useAcehStore.getState();
+          store.setTourPlaying(false);
+          store.selectRegion(null);
         }}
       >
-        <color attach="background" args={[THEME_COLORS.bg]} />
-        {/* Fog satu warna solid sesuai latar (#0b1220) */}
-        <fog attach="fog" args={[THEME_COLORS.bg, 9.5, 22]} />
+        <color attach="background" args={[preset.bg]} />
+        {/* Fog satu warna solid sesuai suasana cahaya */}
+        <fog attach="fog" args={[preset.bg, 10.5, 24]} />
 
-        {/* Pencahayaan: hemisphere light, key light hangat + bayangan lembut, rim light biru */}
-        <hemisphereLight args={['#fff4e0', '#162847', 0.68]} />
-
-        <directionalLight
-          position={[5.5, 8.5, 4.2]}
-          intensity={1.55}
-          color="#ffe6c2"
-          castShadow
-          shadow-mapSize={[1024, 1024]}
-          shadow-camera-near={1}
-          shadow-camera-far={22}
-          shadow-camera-left={-7}
-          shadow-camera-right={7}
-          shadow-camera-top={7}
-          shadow-camera-bottom={-7}
-          shadow-bias={-0.0005}
+        <hemisphereLight
+          args={[preset.hemiSky, preset.hemiGround, preset.hemiIntensity]}
         />
 
         <directionalLight
-          position={[-6.0, 4.5, -5.0]}
-          intensity={0.85}
-          color="#4cc9f0"
+          position={preset.keyPos}
+          intensity={preset.keyIntensity}
+          color={preset.keyColor}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-near={1}
+          shadow-camera-far={24}
+          shadow-camera-left={-7.5}
+          shadow-camera-right={7.5}
+          shadow-camera-top={7.5}
+          shadow-camera-bottom={-7.5}
+          shadow-bias={-0.0003}
+          shadow-radius={4}
+        />
+
+        <directionalLight
+          position={[-6.0, 4.8, -5.0]}
+          intensity={preset.rimIntensity}
+          color={preset.rimColor}
         />
 
         <Sea reducedMotion={reducedMotion} />

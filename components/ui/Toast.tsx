@@ -21,9 +21,8 @@ export default function Toast() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-16 right-4 z-40 flex max-w-sm items-center gap-3 rounded-xl border border-[#25324d] bg-[#121a2b] px-4 py-3 text-xs text-[#f3efe6] md:bottom-14 md:right-6"
+      className="fixed bottom-16 right-4 z-40 flex max-w-sm items-center gap-3 rounded-xl border border-l-4 border-[#25324d] border-l-[#ffb347] bg-[#121a2b] px-4 py-3 text-xs text-[#f3efe6] md:bottom-14 md:right-6"
     >
-      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#ffb347]" />
       <span className="leading-snug">{toastMessage}</span>
       <button
         type="button"
@@ -36,4 +35,3 @@ export default function Toast() {
     </div>
   );
 }
-

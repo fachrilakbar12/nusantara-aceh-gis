@@ -6,45 +6,107 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import gsap from 'gsap';
+import { audioEngine } from '@/lib/audio';
 import { getRegionCentroid } from '@/lib/geo';
 import { useAcehStore } from '@/lib/store';
 
-const OVERVIEW_POS: [number, number, number] = [0, 6.1, 4.35];
-const OVERVIEW_TARGET: [number, number, number] = [0, 0.1, 0];
+const OVERVIEW_TARGET: [number, number, number] = [0, 0.12, 0];
 
 export default function CameraRig({ reducedMotion }: { reducedMotion: boolean }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const hasEntered = useAcehStore((s) => s.hasEntered);
   const activeRegionId = useAcehStore((s) => s.activeRegionId);
 
   const isDraggingRef = useRef(false);
   const isAnimatingRef = useRef(false);
   const baseTargetRef = useRef<[number, number, number]>([...OVERVIEW_TARGET]);
 
+  // Deteksi rasio mobile/portrait
+  const isMobile = size.width < 768 || size.width < size.height;
+
+  // Kamera overview mundur lebih jauh di mobile agar seluruh Aceh muat di layar vertikal
+  // Posisi awal sebelum masuk
   useEffect(() => {
-    camera.position.set(...OVERVIEW_POS);
+    const start: [number, number, number] = isMobile ? [-4.2, 4.0, 9.2] : [-4.6, 2.7, 7.4];
+    camera.position.set(...start);
     if (controlsRef.current) {
-      controlsRef.current.target.set(...OVERVIEW_TARGET);
+      controlsRef.current.target.set(-0.6, 0.15, -0.3);
       controlsRef.current.update();
     }
-  }, [camera]);
+  }, [camera, isMobile]);
 
+  // Animasi terbang sinematik saat pengguna menekan tombol "Masuk"
   useEffect(() => {
-    if (!controlsRef.current) return;
+    if (!hasEntered || !controlsRef.current) return;
+
+    audioEngine.playCameraWhoosh();
+    const startPos = camera.position.clone();
+    const startTarget = controlsRef.current.target.clone();
+    const destOverview: [number, number, number] = isMobile ? [0, 8.8, 6.2] : [0, 6.35, 4.55];
+    const proxy = { t: 0 };
+    isAnimatingRef.current = true;
+
+    const tl = gsap.timeline({
+      onUpdate: () => {
+        const p = proxy.t;
+        const arc = Math.sin(p * Math.PI) * 1.1;
+
+        camera.position.set(
+          THREE.MathUtils.lerp(startPos.x, destOverview[0], p),
+          THREE.MathUtils.lerp(startPos.y, destOverview[1], p) + arc,
+          THREE.MathUtils.lerp(startPos.z, destOverview[2], p)
+        );
+
+        if (controlsRef.current) {
+          controlsRef.current.target.set(
+            THREE.MathUtils.lerp(startTarget.x, OVERVIEW_TARGET[0], p),
+            THREE.MathUtils.lerp(startTarget.y, OVERVIEW_TARGET[1], p),
+            THREE.MathUtils.lerp(startTarget.z, OVERVIEW_TARGET[2], p)
+          );
+          controlsRef.current.update();
+        }
+      },
+      onComplete: () => {
+        isAnimatingRef.current = false;
+      }
+    });
+
+    tl.to(proxy, {
+      t: 1,
+      duration: reducedMotion ? 0.5 : 2.1,
+      ease: 'power3.inOut'
+    });
+
+    return () => {
+      tl.kill();
+      isAnimatingRef.current = false;
+    };
+  }, [hasEntered, camera, reducedMotion, isMobile]);
+
+  // Terbang kamera ke wilayah terpilih
+  useEffect(() => {
+    if (!hasEntered || !controlsRef.current) return;
 
     const centroid = activeRegionId ? getRegionCentroid(activeRegionId) : null;
+    const overviewPos: [number, number, number] = isMobile ? [0, 8.8, 6.2] : [0, 6.35, 4.55];
+
+    // Di mobile, sudut kamera ke wilayah sedikit lebih tinggi dan sedikit mundur ke selatan agar tidak tertutup bottom sheet
     const destPos: [number, number, number] = centroid
-      ? [centroid[0] + 0.18, 2.65, centroid[1] + 2.05]
-      : [...OVERVIEW_POS];
+      ? isMobile
+        ? [centroid[0], 3.8, centroid[1] + 2.8]
+        : [centroid[0] + 0.18, 2.55, centroid[1] + 2.0]
+      : [...overviewPos];
+
     const destTarget: [number, number, number] = centroid
-      ? [centroid[0], 0.32, centroid[1]]
+      ? [centroid[0], 0.34, centroid[1]]
       : [...OVERVIEW_TARGET];
 
     baseTargetRef.current = destTarget;
 
     const startPos = camera.position.clone();
     const startTarget = controlsRef.current.target.clone();
-    const arcHeight = centroid ? 0.65 : 0.45;
+    const arcHeight = centroid ? 0.68 : 0.45;
 
     const proxy = { t: 0 };
     isAnimatingRef.current = true;
@@ -84,7 +146,7 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
       tl.kill();
       isAnimatingRef.current = false;
     };
-  }, [activeRegionId, camera, reducedMotion]);
+  }, [activeRegionId, hasEntered, camera, reducedMotion, isMobile]);
 
   useFrame((state, delta) => {
     if (
@@ -99,10 +161,11 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
     const t = state.clock.elapsedTime;
     const [bx, by, bz] = baseTargetRef.current;
 
-    // Parallax halus mengikuti mouse + camera breathing lembut
-    const targetX = bx + state.pointer.x * 0.14 + Math.sin(t * 0.45) * 0.025;
-    const targetY = by + Math.cos(t * 0.6) * 0.015;
-    const targetZ = bz - state.pointer.y * 0.12 + Math.cos(t * 0.38) * 0.02;
+    // Di mobile, kurangi intensitas parallax agar stabil saat disentuh
+    const parallaxFactor = isMobile ? 0.05 : 0.16;
+    const targetX = bx + state.pointer.x * parallaxFactor + Math.sin(t * 0.45) * 0.02;
+    const targetY = by + Math.cos(t * 0.6) * 0.012;
+    const targetZ = bz - state.pointer.y * parallaxFactor + Math.cos(t * 0.38) * 0.02;
 
     const lerpFactor = Math.min(1, delta * 4);
     controlsRef.current.target.x = THREE.MathUtils.lerp(
@@ -129,16 +192,17 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
       enablePan={false}
       enableDamping
       dampingFactor={0.07}
-      rotateSpeed={0.62}
-      zoomSpeed={0.75}
+      rotateSpeed={0.65}
+      zoomSpeed={0.8}
       minDistance={2.2}
-      maxDistance={10.5}
-      minPolarAngle={0.38}
-      maxPolarAngle={Math.PI * 0.39}
-      minAzimuthAngle={-Math.PI * 0.38}
-      maxAzimuthAngle={Math.PI * 0.38}
+      maxDistance={14.0}
+      minPolarAngle={0.32}
+      maxPolarAngle={Math.PI * 0.41}
+      minAzimuthAngle={-Math.PI * 0.46}
+      maxAzimuthAngle={Math.PI * 0.46}
       onStart={() => {
         isDraggingRef.current = true;
+        useAcehStore.getState().setTourPlaying(false);
       }}
       onEnd={() => {
         isDraggingRef.current = false;
