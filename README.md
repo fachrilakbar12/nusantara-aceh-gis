@@ -131,3 +131,4 @@ Setiap kali wilayah dipilih, sistem membunyikan sintesis suara instrumen tradisi
 
 - Menjalankan server versi produksi:
   npm run start
+
