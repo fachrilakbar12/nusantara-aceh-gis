@@ -53,6 +53,19 @@ input[type='range'].solid-slider {
   outline: none;
 }
 
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentle-float 2.8s ease-in-out infinite;
+}
+
 input[type='range'].solid-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
