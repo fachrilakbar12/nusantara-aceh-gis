@@ -9,21 +9,19 @@ export default function Intro() {
   const setEntered = useAcehStore((s) => s.setEntered);
 
   const handleEnter = useCallback(() => {
-    // 1. Eksekusi state masuk secara langsung dan instan ke store
+    // 1. Jalankan audio secara sinkron langsung di dalam user gesture agar disetujui mobile browser (iOS Safari & Android Chrome)
+    try {
+      audioEngine.startExperience((missingMsg) => {
+        useAcehStore.getState().showToast(missingMsg);
+      });
+      audioEngine.playInstrument('rapai');
+    } catch (err) {
+      console.warn('Audio start error:', err);
+    }
+
+    // 2. Eksekusi state masuk secara langsung dan instan ke store
     useAcehStore.getState().setEntered(true);
     setEntered(true);
-
-    // 2. Putar audio pengiring di background secara aman tanpa memblokir thread UI
-    setTimeout(() => {
-      try {
-        audioEngine.startExperience((missingMsg) => {
-          useAcehStore.getState().showToast(missingMsg);
-        });
-        audioEngine.playInstrument('rapai');
-      } catch (err) {
-        console.warn('Audio start error:', err);
-      }
-    }, 16);
   }, [setEntered]);
 
   // Dukungan tombol Enter, Spasi, atau Escape pada keyboard untuk langsung masuk

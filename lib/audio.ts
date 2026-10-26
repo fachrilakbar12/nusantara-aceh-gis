@@ -132,10 +132,37 @@ class NusantaraAudioEngine {
 
   /**
    * Dipanggil saat pengguna menekan tombol "Masuk".
-   * Memutar /audio/bungong-jeumpa.mp3 secara langsung dalam konteks klik pengguna dengan fade-in 2 detik.
+   * Memutar /audio/bungong-jeumpa.mp3 secara langsung dari awal melodi (TRACK_START_OFFSET).
    */
-  public startExperience(onMissingFile: (msg: string) => void): void {
-    this.initAndPlayBgMusic(onMissingFile);
+  public startExperience(onMissingFile?: (msg: string) => void): void {
+    try {
+      if (this.bgAudio) {
+        this.bgAudio.currentTime = TRACK_START_OFFSET;
+      }
+      this.initAndPlayBgMusic(onMissingFile);
+    } catch (err) {
+      console.warn('AudioEngine start error:', err);
+    }
+  }
+
+  /**
+   * Menghentikan musik pengiring ketika pengguna keluar dari peta, dan mereset posisi lagu ke awal (TRACK_START_OFFSET)
+   */
+  public stopExperience(): void {
+    try {
+      if (this.bgAudio) {
+        this.bgAudio.pause();
+        this.bgAudio.currentTime = TRACK_START_OFFSET;
+      }
+      if (this.bgFadeGain && this.ctx) {
+        const now = this.ctx.currentTime;
+        this.bgFadeGain.gain.cancelScheduledValues(now);
+        this.bgFadeGain.gain.setValueAtTime(0.0001, now);
+      }
+      this.bgStarted = false;
+    } catch (err) {
+      console.warn('AudioEngine stop error:', err);
+    }
   }
 
   public setMuted(muted: boolean): void {

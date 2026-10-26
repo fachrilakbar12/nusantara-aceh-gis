@@ -101,7 +101,7 @@ export default function Scene() {
           intensity={preset.keyIntensity}
           color={preset.keyColor}
           castShadow
-          shadow-mapSize={[2048, 2048]}
+          shadow-mapSize={[1024, 1024]}
           shadow-camera-near={1}
           shadow-camera-far={24}
           shadow-camera-left={-7.5}

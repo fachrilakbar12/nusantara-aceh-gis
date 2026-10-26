@@ -140,6 +140,7 @@ export default function RegionList() {
           onClick={() => {
             selectRegion(null);
             setDrawerOpen(false);
+            audioEngine.stopExperience();
             audioEngine.playHoverTick();
             useAcehStore.getState().setTourPlaying(false);
             useAcehStore.getState().setEntered(false);

@@ -68,6 +68,7 @@ export default function Header() {
     setTourPlaying(false);
     selectRegion(null);
     setDrawerOpen(false);
+    audioEngine.stopExperience();
     audioEngine.playHoverTick();
     setEntered(false);
   };
