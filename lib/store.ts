@@ -1,132 +1,106 @@
 import { create } from 'zustand';
-import { EDUCATION_ERAS } from './data';
+import { REGIONS_ACEH } from './regions';
 
-export type NavTab = 'home' | 'camera' | 'doc' | 'trophy' | 'info';
-export type CameraPreset = 'default' | 'low' | 'closeup';
-
-interface JourneyState {
-  activeEraIndex: number;
-  previousEraIndex: number;
-  transitionId: number;
-  isTransitioning: boolean;
-  isLoaded: boolean;
-  isStarted: boolean;
-  isMuted: boolean;
-  volume: number;
-  activeNavTab: NavTab;
-  cameraPreset: CameraPreset;
-  isMenuOpen: boolean;
-  glitchBurstId: number;
-  lastInteractionAt: number;
-  usingFallbackAvatar: boolean;
-
-  setEraIndex: (index: number) => void;
-  nextEra: () => void;
-  prevEra: () => void;
-  setTransitioning: (val: boolean) => void;
-  setLoaded: (val: boolean) => void;
-  setStarted: (val: boolean) => void;
-  toggleMute: () => void;
-  setMuted: (val: boolean) => void;
-  setVolume: (val: number) => void;
-  setActiveNavTab: (tab: NavTab) => void;
-  cycleCameraPreset: () => void;
-  setMenuOpen: (open: boolean) => void;
-  triggerGlitchBurst: () => void;
-  touchInteraction: () => void;
-  setUsingFallbackAvatar: (val: boolean) => void;
+export interface RippleEvent {
+  id: number;
+  x: number;
+  z: number;
+  color: string;
 }
 
-const PRESET_ORDER: CameraPreset[] = ['default', 'low', 'closeup'];
+interface AcehStoreState {
+  hasEntered: boolean;
+  activeRegionId: string | null;
+  hoveredRegionId: string | null;
+  hoverPointer: { x: number; y: number };
+  isMuted: boolean;
+  volume: number;
+  isDrawerOpen: boolean;
+  isCreditsOpen: boolean;
+  searchQuery: string;
+  toastMessage: string | null;
+  rippleEvent: RippleEvent | null;
 
-export const useJourneyStore = create<JourneyState>((set, get) => ({
-  activeEraIndex: 0,
-  previousEraIndex: 0,
-  transitionId: 0,
-  isTransitioning: false,
-  isLoaded: false,
-  isStarted: false,
+  setEntered: (entered: boolean) => void;
+  selectRegion: (regionId: string | null) => void;
+  nextRegion: () => string;
+  prevRegion: () => string;
+  setHoveredRegion: (regionId: string | null) => void;
+  setHoverPointer: (x: number, y: number) => void;
+  toggleMute: () => void;
+  setVolume: (vol: number) => void;
+  setDrawerOpen: (open: boolean) => void;
+  setCreditsOpen: (open: boolean) => void;
+  setSearchQuery: (q: string) => void;
+  showToast: (msg: string) => void;
+  dismissToast: () => void;
+  triggerRipple: (x: number, z: number, color: string) => void;
+}
+
+export const useAcehStore = create<AcehStoreState>((set, get) => ({
+  hasEntered: false,
+  activeRegionId: null,
+  hoveredRegionId: null,
+  hoverPointer: { x: 0, y: 0 },
   isMuted: false,
-  volume: 0.72,
-  activeNavTab: 'home',
-  cameraPreset: 'default',
-  isMenuOpen: false,
-  glitchBurstId: 0,
-  lastInteractionAt: Date.now(),
-  usingFallbackAvatar: false,
+  volume: 0.75,
+  isDrawerOpen: false,
+  isCreditsOpen: false,
+  searchQuery: '',
+  toastMessage: null,
+  rippleEvent: null,
 
-  setEraIndex: (index: number) => {
-    const clamped = ((index % EDUCATION_ERAS.length) + EDUCATION_ERAS.length) % EDUCATION_ERAS.length;
-    const current = get().activeEraIndex;
-    if (clamped === current) return;
-    set((state) => ({
-      previousEraIndex: state.activeEraIndex,
-      activeEraIndex: clamped,
-      transitionId: state.transitionId + 1,
-      isTransitioning: true,
-      lastInteractionAt: Date.now()
-    }));
+  setEntered: (entered) => set({ hasEntered: entered }),
+
+  selectRegion: (regionId) => set({ activeRegionId: regionId }),
+
+  nextRegion: () => {
+    const current = get().activeRegionId;
+    const idx = REGIONS_ACEH.findIndex((r) => r.id === current);
+    const nextIdx = idx < 0 ? 0 : (idx + 1) % REGIONS_ACEH.length;
+    const nextId = REGIONS_ACEH[nextIdx].id;
+    set({ activeRegionId: nextId });
+    return nextId;
   },
 
-  nextEra: () => {
-    const next = (get().activeEraIndex + 1) % EDUCATION_ERAS.length;
-    get().setEraIndex(next);
+  prevRegion: () => {
+    const current = get().activeRegionId;
+    const idx = REGIONS_ACEH.findIndex((r) => r.id === current);
+    const prevIdx =
+      idx <= 0 ? REGIONS_ACEH.length - 1 : (idx - 1 + REGIONS_ACEH.length) % REGIONS_ACEH.length;
+    const prevId = REGIONS_ACEH[prevIdx].id;
+    set({ activeRegionId: prevId });
+    return prevId;
   },
 
-  prevEra: () => {
-    const prev = (get().activeEraIndex - 1 + EDUCATION_ERAS.length) % EDUCATION_ERAS.length;
-    get().setEraIndex(prev);
+  setHoveredRegion: (regionId) => set({ hoveredRegionId: regionId }),
+
+  setHoverPointer: (x, y) => set({ hoverPointer: { x, y } }),
+
+  toggleMute: () => set((s) => ({ isMuted: !s.isMuted })),
+
+  setVolume: (vol) => {
+    const clamped = Math.max(0, Math.min(1, vol));
+    set({ volume: clamped, isMuted: clamped === 0 });
   },
 
-  setTransitioning: (val: boolean) => set({ isTransitioning: val }),
-  setLoaded: (val: boolean) => set({ isLoaded: val }),
-  setStarted: (val: boolean) => set({ isStarted: val, lastInteractionAt: Date.now() }),
+  setDrawerOpen: (open) => set({ isDrawerOpen: open }),
 
-  toggleMute: () =>
-    set((state) => ({
-      isMuted: !state.isMuted,
-      lastInteractionAt: Date.now()
-    })),
+  setCreditsOpen: (open) => set({ isCreditsOpen: open }),
 
-  setMuted: (val: boolean) => set({ isMuted: val }),
+  setSearchQuery: (q) => set({ searchQuery: q }),
 
-  setVolume: (val: number) => {
-    const clamped = Math.max(0, Math.min(1, val));
+  showToast: (msg) => set({ toastMessage: msg }),
+
+  dismissToast: () => set({ toastMessage: null }),
+
+  triggerRipple: (x, z, color) =>
     set({
-      volume: clamped,
-      isMuted: clamped === 0,
-      lastInteractionAt: Date.now()
-    });
-  },
-
-  setActiveNavTab: (tab: NavTab) =>
-    set({
-      activeNavTab: tab,
-      lastInteractionAt: Date.now()
-    }),
-
-  cycleCameraPreset: () =>
-    set((state) => {
-      const idx = PRESET_ORDER.indexOf(state.cameraPreset);
-      const next = PRESET_ORDER[(idx + 1) % PRESET_ORDER.length];
-      return {
-        cameraPreset: next,
-        lastInteractionAt: Date.now()
-      };
-    }),
-
-  setMenuOpen: (open: boolean) =>
-    set({
-      isMenuOpen: open,
-      lastInteractionAt: Date.now()
-    }),
-
-  triggerGlitchBurst: () =>
-    set((state) => ({
-      glitchBurstId: state.glitchBurstId + 1
-    })),
-
-  touchInteraction: () => set({ lastInteractionAt: Date.now() }),
-  setUsingFallbackAvatar: (val: boolean) => set({ usingFallbackAvatar: val })
+      rippleEvent: {
+        id: Date.now(),
+        x,
+        z,
+        color
+      }
+    })
 }));
-

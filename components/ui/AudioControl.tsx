@@ -1,98 +1,72 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { audioManager } from '@/lib/audio';
-import { useJourneyStore } from '@/lib/store';
+import React from 'react';
+import { audioEngine } from '@/lib/audio';
+import { useAcehStore } from '@/lib/store';
 
-export default function AudioControl() {
-  const isMuted = useJourneyStore((s) => s.isMuted);
-  const volume = useJourneyStore((s) => s.volume);
-  const toggleMute = useJourneyStore((s) => s.toggleMute);
-  const setVolume = useJourneyStore((s) => s.setVolume);
+export default function AudioControl({ accentColor }: { accentColor: string }) {
+  const isMuted = useAcehStore((s) => s.isMuted);
+  const volume = useAcehStore((s) => s.volume);
+  const toggleMute = useAcehStore((s) => s.toggleMute);
+  const setVolume = useAcehStore((s) => s.setVolume);
 
-  useEffect(() => {
-    audioManager.setMuted(isMuted);
-  }, [isMuted]);
+  const handleToggleMute = () => {
+    const nextMuted = !isMuted;
+    toggleMute();
+    audioEngine.setMuted(nextMuted);
+  };
 
-  useEffect(() => {
-    audioManager.setVolume(volume);
-  }, [volume]);
-
-  const pct = Math.round(volume * 100);
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    audioEngine.setVolume(val);
+    audioEngine.setMuted(val === 0);
+  };
 
   return (
     <div
-      aria-label="Kontrol suara"
-      className="absolute right-3.5 top-16 z-20 flex items-center gap-2.5 md:bottom-5 md:left-6 md:right-auto md:top-auto"
+      className="flex items-center gap-2.5 rounded-xl border border-[#25324d] bg-[#121a2b] px-3 py-1.5"
+      style={{ ['--accent-color' as string]: accentColor }}
     >
       <button
         type="button"
-        aria-label={isMuted ? 'Aktifkan suara (Unmute)' : 'Matikan suara (Mute)'}
-        aria-pressed={isMuted}
-        onMouseEnter={() => audioManager.playHover()}
-        onClick={() => {
-          toggleMute();
-          if (isMuted) {
-            setTimeout(() => audioManager.playClick(), 30);
-          }
-        }}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-[#12181c]/70 text-white/85 backdrop-blur-md transition-all duration-200 hover:border-neon hover:text-neon hover:shadow-neon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon"
+        onClick={handleToggleMute}
+        aria-label={isMuted ? 'Nyalakan suara (M)' : 'Bisukan suara (M)'}
+        title={isMuted ? 'Nyalakan suara (M)' : 'Bisukan suara (M)'}
+        className="flex h-6 w-6 items-center justify-center rounded-lg text-xs font-medium text-[#f3efe6] transition-colors duration-200 hover:bg-[#182238]"
       >
-        <svg
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 9h4l5-4v14l-5-4H4z" />
-          {isMuted ? (
-            <path d="M16 9l5 6M21 9l-5 6" />
-          ) : (
-            <>
-              <path d="M16 8.5a5 5 0 0 1 0 7" />
-              <path d="M18.5 6a8.5 8.5 0 0 1 0 12" />
-            </>
-          )}
-        </svg>
+        {isMuted || volume === 0 ? (
+          <svg className="h-4 w-4 text-[#93a0ba]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        ) : (
+          <svg
+            className="h-4 w-4 transition-colors duration-300"
+            style={{ color: accentColor }}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M11 5L6 9H2v6h4l5 4V5z" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+        )}
       </button>
 
-      {/* Equalizer Bar Animasi */}
-      <div
-        aria-hidden="true"
-        className={`flex h-4 items-end gap-[2.5px] ${isMuted ? 'opacity-35' : ''}`}
-      >
-        {[0, 1, 2, 3].map((bar) => (
-          <span
-            key={bar}
-            className={`w-[3px] origin-bottom rounded-full bg-neon shadow-[0_0_6px_#a8ff60] ${
-              isMuted ? 'h-1' : `eq-bar eq-bar-${bar + 1}`
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Slider Volume Master */}
       <input
         type="range"
         min={0}
-        max={100}
-        value={isMuted ? 0 : pct}
-        aria-label="Volume master"
-        onChange={(e) => {
-          const nextVal = Number(e.target.value) / 100;
-          setVolume(nextVal);
-        }}
-        style={
-          {
-            '--vol-pct': `${isMuted ? 0 : pct}%`
-          } as React.CSSProperties
-        }
-        className="volume-slider hidden w-20 cursor-pointer md:block"
+        max={1}
+        step={0.02}
+        value={isMuted ? 0 : volume}
+        onChange={handleVolumeChange}
+        aria-label="Volume suara"
+        className="solid-slider hidden w-16 sm:block"
       />
     </div>
   );
 }
-

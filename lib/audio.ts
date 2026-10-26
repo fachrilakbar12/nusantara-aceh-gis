@@ -1,451 +1,341 @@
-import { Howl, Howler } from 'howler';
-import { CONFIG, EDUCATION_ERAS } from './data';
+import { InstrumenKlik, REGION_BY_ID } from './regions';
 
-type SoundKey = keyof typeof CONFIG.audioPaths;
+const BUNGONG_JEUMPA_PATH = '/audio/bungong-jeumpa.mp3';
 
-export class AudioManager {
+class NusantaraAudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private bgFadeGain: GainNode | null = null;
+  private bgAudio: HTMLAudioElement | null = null;
+  private bgSource: MediaElementAudioSourceNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
-  private howls: Partial<Record<SoundKey, Howl>> = {};
-  private howlLoaded: Partial<Record<SoundKey, boolean>> = {};
-  private initialized = false;
-  private muted = false;
-  private volume = 0.72;
-  private lastTickAt = 0;
+  private isMuted = false;
+  private volume = 0.75;
+  private lastHoverAt = 0;
 
-  /**
-   * Dipanggil setelah interaksi klik pertama di layar Loader ("KLIK UNTUK MULAI")
-   */
-  public init(initialVolume = 0.72, initialMuted = false): void {
-    this.volume = initialVolume;
-    this.muted = initialMuted;
-
-    if (typeof window === 'undefined') return;
-
-    if (this.initialized) {
-      if (this.ctx && this.ctx.state === 'suspended') {
-        void this.ctx.resume();
-      }
-      return;
-    }
-
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-
-    if (AudioCtx) {
+  private ensureContext(): AudioContext | null {
+    if (typeof window === 'undefined') return null;
+    if (!this.ctx) {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return null;
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+      this.masterGain.gain.value = this.isMuted ? 0 : this.volume;
       this.masterGain.connect(this.ctx.destination);
-
-      // Fade-in master volume dengan mulus
-      const targetGain = this.muted ? 0.0001 : Math.max(0.0001, this.volume);
-      this.masterGain.gain.exponentialRampToValueAtTime(
-        targetGain,
-        this.ctx.currentTime + 0.9
-      );
-
-      this.createNoiseBuffer();
-      this.startAmbientDrone();
-      this.startStageHum();
+      this.noiseBuffer = this.buildNoiseBuffer(this.ctx);
     }
-
-    Howler.volume(this.muted ? 0 : this.volume);
-    Howler.mute(this.muted);
-    this.setupHowlerFallbacks();
-
-    this.initialized = true;
+    if (this.ctx.state === 'suspended') {
+      void this.ctx.resume();
+    }
+    return this.ctx;
   }
 
-  /**
-   * Siapkan instance Howler untuk file di /public/audio/*.mp3 jika tersedia,
-   * dan otomatis fallback ke Web Audio API synthesizer bila file belum ada / gagal dimuat.
-   */
-  private setupHowlerFallbacks(): void {
-    const entries = Object.entries(CONFIG.audioPaths) as [SoundKey, string][];
-
-    entries.forEach(([key, src]) => {
-      try {
-        const isAmbient = key === 'ambient';
-        const howl = new Howl({
-          src: [src],
-          loop: isAmbient,
-          volume: isAmbient ? 0.28 : 0.55,
-          preload: true,
-          onload: () => {
-            // Hanya tandai aktif bila durasi > 0.08 detik (bukan file placeholder kosong)
-            if (howl.duration() > 0.08) {
-              this.howlLoaded[key] = true;
-              if (isAmbient && !this.muted) {
-                howl.fade(0, 0.28, 1200);
-                howl.play();
-              }
-            }
-          },
-          onloaderror: () => {
-            this.howlLoaded[key] = false;
-          }
-        });
-        this.howls[key] = howl;
-      } catch {
-        this.howlLoaded[key] = false;
-      }
-    });
-  }
-
-  private createNoiseBuffer(): void {
-    if (!this.ctx) return;
-    const sr = this.ctx.sampleRate;
-    const length = sr * 3;
-    const buffer = this.ctx.createBuffer(1, length, sr);
-    const channel = buffer.getChannelData(0);
+  private buildNoiseBuffer(ctx: AudioContext): AudioBuffer {
+    const length = Math.floor(ctx.sampleRate * 0.45);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
     for (let i = 0; i < length; i++) {
-      channel[i] = Math.random() * 2 - 1;
+      data[i] = Math.random() * 2 - 1;
     }
-    this.noiseBuffer = buffer;
+    return buffer;
   }
 
   /**
-   * Ambient sci-fi drone: 2 oscillator (55Hz sawtooth & 110Hz sine) + lowpass filter + LFO
+   * Dipanggil saat pengguna menekan tombol "Masuk".
+   * Memeriksa keberadaan /audio/bungong-jeumpa.mp3; jika tersedia, putar loop dengan fade-in 2 detik.
+   * Jika tidak tersedia, panggil callback onMissingFile untuk menampilkan toast tanpa error.
    */
-  private startAmbientDrone(): void {
-    if (!this.ctx || !this.masterGain) return;
-    const now = this.ctx.currentTime;
+  public async startExperience(onMissingFile: (msg: string) => void): Promise<void> {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
 
-    const oscLow = this.ctx.createOscillator();
-    const oscSub = this.ctx.createOscillator();
-    oscLow.type = 'sawtooth';
-    oscLow.frequency.setValueAtTime(55, now);
-    oscSub.type = 'sine';
-    oscSub.frequency.setValueAtTime(110, now);
+    try {
+      const res = await fetch(BUNGONG_JEUMPA_PATH, { method: 'HEAD' });
+      const contentType = res.headers.get('content-type') || '';
+      const contentLength = Number(res.headers.get('content-length') || '0');
+      const exists = res.ok && !contentType.includes('text/html') && contentLength > 256;
 
-    const lowpass = this.ctx.createBiquadFilter();
-    lowpass.type = 'lowpass';
-    lowpass.frequency.setValueAtTime(175, now);
-    lowpass.Q.setValueAtTime(2.4, now);
+      if (!exists) {
+        onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
+        return;
+      }
 
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(0.13, now);
-    lfoGain.gain.setValueAtTime(68, now);
-    lfo.connect(lfoGain);
-    lfoGain.connect(lowpass.frequency);
+      if (!this.bgAudio) {
+        const audio = new Audio(BUNGONG_JEUMPA_PATH);
+        audio.loop = true;
+        audio.preload = 'auto';
+        audio.crossOrigin = 'anonymous';
 
-    const droneGain = this.ctx.createGain();
-    droneGain.gain.setValueAtTime(0.001, now);
-    droneGain.gain.exponentialRampToValueAtTime(0.052, now + 1.6);
+        const fadeGain = ctx.createGain();
+        fadeGain.gain.setValueAtTime(0.0001, ctx.currentTime);
 
-    oscLow.connect(lowpass);
-    oscSub.connect(lowpass);
-    lowpass.connect(droneGain);
-    droneGain.connect(this.masterGain);
+        const source = ctx.createMediaElementSource(audio);
+        source.connect(fadeGain);
+        fadeGain.connect(this.masterGain);
 
-    oscLow.start(now);
-    oscSub.start(now);
-    lfo.start(now);
-  }
+        this.bgAudio = audio;
+        this.bgSource = source;
+        this.bgFadeGain = fadeGain;
+      }
 
-  /**
-   * Stage hum: white noise lembut yang difilter bandpass
-   */
-  private startStageHum(): void {
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
-    const now = this.ctx.currentTime;
-
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = this.noiseBuffer;
-    noise.loop = true;
-
-    const bandpass = this.ctx.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.setValueAtTime(132, now);
-    bandpass.Q.setValueAtTime(4.2, now);
-
-    const humGain = this.ctx.createGain();
-    humGain.gain.setValueAtTime(0.022, now);
-
-    noise.connect(bandpass);
-    bandpass.connect(humGain);
-    humGain.connect(this.masterGain);
-    noise.start(now);
-  }
-
-  /**
-   * UI Hover: blip pendek tinggi (sine 1200Hz, 40ms)
-   */
-  public playHover(): void {
-    if (!this.initialized || this.muted) return;
-    if (this.howlLoaded.hover && this.howls.hover) {
-      this.howls.hover.play();
-      return;
-    }
-    if (!this.ctx || !this.masterGain) return;
-
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(1460, now + 0.04);
-
-    gain.gain.setValueAtTime(0.05, now);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.042);
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(now);
-    osc.stop(now + 0.045);
-  }
-
-  /**
-   * UI Klik: click-tick + chirp naik (square 400→900Hz, 90ms)
-   */
-  public playClick(): void {
-    if (!this.initialized || this.muted) return;
-    if (this.howlLoaded.click && this.howls.click) {
-      this.howls.click.play();
-      return;
-    }
-    if (!this.ctx || !this.masterGain) return;
-
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(900, now + 0.09);
-
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2500, now);
-
-    gain.gain.setValueAtTime(0.068, now);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.092);
-
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(now);
-    osc.stop(now + 0.095);
-  }
-
-  /**
-   * Tick halus saat scramble huruf
-   */
-  public playScrambleTick(): void {
-    if (!this.initialized || this.muted || !this.ctx || !this.masterGain) return;
-    const now = this.ctx.currentTime;
-    if (now - this.lastTickAt < 0.032) return;
-    this.lastTickAt = now;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(1580 + Math.random() * 360, now);
-    gain.gain.setValueAtTime(0.022, now);
-    gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.018);
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(now);
-    osc.stop(now + 0.02);
-  }
-
-  /**
-   * Glitch noise burst pendek 30–80ms
-   */
-  public playGlitch(): void {
-    if (!this.initialized || this.muted) return;
-    if (this.howlLoaded.glitch && this.howls.glitch) {
-      this.howls.glitch.play();
-      return;
-    }
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
-
-    const now = this.ctx.currentTime;
-    const duration = 0.032 + Math.random() * 0.048;
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.noiseBuffer;
-
-    const bp = this.ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(950 + Math.random() * 2300, now);
-    bp.Q.setValueAtTime(2.6, now);
-
-    const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.072, now);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
-
-    src.connect(bp);
-    bp.connect(gain);
-    gain.connect(this.masterGain);
-    src.start(now, Math.random() * 1.8, duration);
-  }
-
-  /**
-   * Transisi Ganti Outfit:
-   * - Whoosh bandpass sweep (200→4000Hz selama 0.8s)
-   * - Scan beep naik nada
-   * - Impact bass (sine 80→40Hz) saat materialize
-   * - Nada khas jenjang (SMP C-E-G, SMK D-F#-A, KULIAH E-G#-B-E)
-   */
-  public playOutfitMorph(eraIndex: number): void {
-    if (!this.initialized || this.muted) return;
-    if (this.howlLoaded.morph && this.howls.morph) {
-      this.howls.morph.play();
-    }
-    if (!this.ctx || !this.masterGain || !this.noiseBuffer) return;
-
-    const now = this.ctx.currentTime;
-
-    // 1. Whoosh noise bandpass sweep 200 -> 4000Hz
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = this.noiseBuffer;
-
-    const bp = this.ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.Q.setValueAtTime(2.2, now);
-    bp.frequency.setValueAtTime(200, now);
-    bp.frequency.exponentialRampToValueAtTime(4000, now + 0.82);
-
-    const whooshGain = this.ctx.createGain();
-    whooshGain.gain.setValueAtTime(0.001, now);
-    whooshGain.gain.linearRampToValueAtTime(0.17, now + 0.25);
-    whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 0.86);
-
-    noise.connect(bp);
-    bp.connect(whooshGain);
-    whooshGain.connect(this.masterGain);
-    noise.start(now, 0, 0.88);
-
-    // 2. Scan laser beep naik nada
-    const scanOsc = this.ctx.createOscillator();
-    const scanGain = this.ctx.createGain();
-    scanOsc.type = 'sine';
-    scanOsc.frequency.setValueAtTime(310, now);
-    scanOsc.frequency.exponentialRampToValueAtTime(1520, now + 0.76);
-    scanGain.gain.setValueAtTime(0.001, now);
-    scanGain.gain.linearRampToValueAtTime(0.058, now + 0.14);
-    scanGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.78);
-
-    scanOsc.connect(scanGain);
-    scanGain.connect(this.masterGain);
-    scanOsc.start(now);
-    scanOsc.stop(now + 0.8);
-
-    // 3. Impact sub-bass (80 -> 40Hz) saat outfit materialize
-    const impactAt = now + 0.36;
-    const bassOsc = this.ctx.createOscillator();
-    const bassGain = this.ctx.createGain();
-    bassOsc.type = 'sine';
-    bassOsc.frequency.setValueAtTime(80, impactAt);
-    bassOsc.frequency.exponentialRampToValueAtTime(40, impactAt + 0.46);
-    bassGain.gain.setValueAtTime(0.24, impactAt);
-    bassGain.gain.exponentialRampToValueAtTime(0.001, impactAt + 0.5);
-
-    bassOsc.connect(bassGain);
-    bassGain.connect(this.masterGain);
-    bassOsc.start(impactAt);
-    bassOsc.stop(impactAt + 0.52);
-
-    // 4. Motif musikal khas tiap jenjang
-    this.playEraMotif(eraIndex, now + 0.3);
-  }
-
-  private playEraMotif(eraIndex: number, startAt: number): void {
-    if (!this.ctx || !this.masterGain) return;
-    const era = EDUCATION_ERAS[eraIndex];
-    if (!era) return;
-
-    if (era.chordMode === 'arpeggio-smp') {
-      // SMP: Arpeggio ceria C - E - G
-      era.chordNotes.forEach((freq, idx) => {
-        if (!this.ctx || !this.masterGain) return;
-        const t = startAt + idx * 0.095;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq * 2, t);
-        gain.gain.setValueAtTime(0.085, t);
-        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.36);
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.38);
-      });
-    } else if (era.chordMode === 'arpeggio-smk') {
-      // SMK: Arpeggio mantap D - F# - A
-      era.chordNotes.forEach((freq, idx) => {
-        if (!this.ctx || !this.masterGain) return;
-        const t = startAt + idx * 0.105;
-        const osc = this.ctx.createOscillator();
-        const filter = this.ctx.createBiquadFilter();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq, t);
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(1650, t);
-        gain.gain.setValueAtTime(0.078, t);
-        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.42);
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.44);
-      });
-    } else {
-      // KULIAH: Chord megah E - G# - B - E tinggi
-      era.chordNotes.forEach((freq, idx) => {
-        if (!this.ctx || !this.masterGain) return;
-        const t = startAt + idx * 0.028;
-        const osc1 = this.ctx.createOscillator();
-        const osc2 = this.ctx.createOscillator();
-        const filter = this.ctx.createBiquadFilter();
-        const gain = this.ctx.createGain();
-        osc1.type = 'sawtooth';
-        osc2.type = 'triangle';
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq * 1.004, t);
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(2200, t);
-        filter.frequency.exponentialRampToValueAtTime(720, t + 0.92);
-        gain.gain.setValueAtTime(0.058, t);
-        gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.96);
-
-        osc1.connect(filter);
-        osc2.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.masterGain);
-        osc1.start(t);
-        osc2.start(t);
-        osc1.stop(t + 0.98);
-        osc2.stop(t + 0.98);
-      });
+      await this.bgAudio.play();
+      if (this.bgFadeGain) {
+        const now = ctx.currentTime;
+        this.bgFadeGain.gain.cancelScheduledValues(now);
+        this.bgFadeGain.gain.setValueAtTime(0.0001, now);
+        this.bgFadeGain.gain.linearRampToValueAtTime(0.45, now + 2.0);
+      }
+    } catch {
+      onMissingFile('Taruh file instrumental di /public/audio/bungong-jeumpa.mp3');
     }
   }
 
   public setMuted(muted: boolean): void {
-    this.muted = muted;
-    Howler.mute(muted);
-    if (this.ctx && this.masterGain) {
-      const target = muted ? 0.0001 : Math.max(0.0001, this.volume);
-      this.masterGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.06);
-    }
+    this.isMuted = muted;
+    this.applyMasterGain();
   }
 
-  public setVolume(volume: number): void {
-    this.volume = Math.max(0, Math.min(1, volume));
-    Howler.volume(this.muted ? 0 : this.volume);
-    if (this.ctx && this.masterGain && !this.muted) {
-      const target = Math.max(0.0001, this.volume);
-      this.masterGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.06);
+  public setVolume(vol: number): void {
+    this.volume = Math.max(0, Math.min(1, vol));
+    this.applyMasterGain();
+  }
+
+  private applyMasterGain(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    const target = this.isMuted ? 0 : this.volume;
+    this.masterGain.gain.cancelScheduledValues(now);
+    this.masterGain.gain.setTargetAtTime(target, now, 0.04);
+  }
+
+  /**
+   * Tick tipis saat hover wilayah
+   */
+  public playHoverTick(): void {
+    if (this.isMuted) return;
+    const nowMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (nowMs - this.lastHoverAt < 55) return;
+    this.lastHoverAt = nowMs;
+
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(980, t);
+    osc.frequency.exponentialRampToValueAtTime(1420, t + 0.028);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.032);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.035);
+  }
+
+  /**
+   * Whoosh pendek saat kamera terbang menuju wilayah
+   */
+  public playCameraWhoosh(): void {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain || !this.noiseBuffer) return;
+
+    const t = ctx.currentTime;
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 2.4;
+    filter.frequency.setValueAtTime(220, t);
+    filter.frequency.exponentialRampToValueAtTime(760, t + 0.18);
+    filter.frequency.exponentialRampToValueAtTime(190, t + 0.42);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.11, t + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+    noise.start(t);
+    noise.stop(t + 0.44);
+  }
+
+  /**
+   * Bunyi klik wilayah sesuai kelompok budaya Aceh
+   */
+  public playRegionClick(regionId: string): void {
+    if (this.isMuted) return;
+    const region = REGION_BY_ID[regionId];
+    const instrumen: InstrumenKlik = region ? region.instrumenKlik : 'rapai';
+    this.playInstrument(instrumen);
+    this.playCameraWhoosh();
+  }
+
+  public playInstrument(instrumen: InstrumenKlik): void {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+
+    const t = ctx.currentTime;
+
+    switch (instrumen) {
+      case 'rapai': {
+        // Pesisir utara/timur: bunyi gendang rapai (burst noise pendek + sine turun nada)
+        const osc = ctx.createOscillator();
+        const oscGain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(185, t);
+        osc.frequency.exponentialRampToValueAtTime(68, t + 0.22);
+
+        oscGain.gain.setValueAtTime(0.36, t);
+        oscGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.26);
+
+        if (this.noiseBuffer) {
+          const noise = ctx.createBufferSource();
+          noise.buffer = this.noiseBuffer;
+          const bpf = ctx.createBiquadFilter();
+          bpf.type = 'bandpass';
+          bpf.frequency.setValueAtTime(1350, t);
+          bpf.Q.value = 1.8;
+
+          const nGain = ctx.createGain();
+          nGain.gain.setValueAtTime(0.24, t);
+          nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+
+          noise.connect(bpf);
+          bpf.connect(nGain);
+          nGain.connect(this.masterGain);
+          noise.start(t);
+          noise.stop(t + 0.08);
+        }
+        break;
+      }
+
+      case 'gayo-bambu': {
+        // Gayo (Aceh Tengah, Bener Meriah, Gayo Lues): bunyi kayu/bambu bernada
+        const freqs = [528, 792];
+        freqs.forEach((f, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const start = t + idx * 0.045;
+          osc.frequency.setValueAtTime(f, start);
+          osc.frequency.exponentialRampToValueAtTime(f * 0.94, start + 0.16);
+
+          gain.gain.setValueAtTime(0.26 / (idx + 1), start);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain!);
+          osc.start(start);
+          osc.stop(start + 0.19);
+        });
+        break;
+      }
+
+      case 'gong-alas': {
+        // Alas, Singkil, Subulussalam, Aceh Tenggara: bunyi gong kecil
+        const partials = [
+          { freq: 220, amp: 0.28, dur: 0.65 },
+          { freq: 334, amp: 0.14, dur: 0.45 },
+          { freq: 542, amp: 0.08, dur: 0.28 }
+        ];
+        partials.forEach((p) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(p.freq, t);
+
+          gain.gain.setValueAtTime(p.amp, t);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + p.dur);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain!);
+          osc.start(t);
+          osc.stop(t + p.dur + 0.02);
+        });
+        break;
+      }
+
+      case 'petik-barat': {
+        // Pantai barat-selatan dan Simeulue: bunyi petik senar pendek
+        const notes = [392, 493.88];
+        notes.forEach((freq, idx) => {
+          const start = t + idx * 0.055;
+          const osc = ctx.createOscillator();
+          const lpf = ctx.createBiquadFilter();
+          const gain = ctx.createGain();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, start);
+
+          lpf.type = 'lowpass';
+          lpf.frequency.setValueAtTime(2400, start);
+          lpf.frequency.exponentialRampToValueAtTime(420, start + 0.24);
+
+          gain.gain.setValueAtTime(0.2, start);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.26);
+
+          osc.connect(lpf);
+          lpf.connect(gain);
+          gain.connect(this.masterGain!);
+          osc.start(start);
+          osc.stop(start + 0.28);
+        });
+        break;
+      }
+
+      case 'rebana-tamiang': {
+        // Tamiang: bunyi rebana ringan (nada membran tinggi + gemerincing halus)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(290, t);
+        osc.frequency.exponentialRampToValueAtTime(145, t + 0.16);
+
+        gain.gain.setValueAtTime(0.28, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.19);
+
+        if (this.noiseBuffer) {
+          const noise = ctx.createBufferSource();
+          noise.buffer = this.noiseBuffer;
+          const hpf = ctx.createBiquadFilter();
+          hpf.type = 'highpass';
+          hpf.frequency.setValueAtTime(3600, t);
+
+          const nGain = ctx.createGain();
+          nGain.gain.setValueAtTime(0.16, t);
+          nGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+
+          noise.connect(hpf);
+          hpf.connect(nGain);
+          nGain.connect(this.masterGain);
+          noise.start(t);
+          noise.stop(t + 0.12);
+        }
+        break;
+      }
     }
   }
 }
 
-export const audioManager = new AudioManager();
-
+export const audioEngine = new NusantaraAudioEngine();

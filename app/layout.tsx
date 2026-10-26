@@ -1,32 +1,25 @@
 import type { Metadata } from 'next';
-import { Inter, Orbitron, Space_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-const orbitron = Orbitron({
-  subsets: ['latin'],
-  weight: ['500', '700', '800', '900'],
-  variable: '--font-orbitron',
+const fraunces = localFont({
+  src: './fonts/Fraunces-Latin.woff2',
+  weight: '600 700',
+  variable: '--font-display',
   display: 'swap'
 });
 
-const spaceMono = Space_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-space-mono',
-  display: 'swap'
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',
+const instrumentSans = localFont({
+  src: './fonts/InstrumentSans-Latin.woff2',
+  weight: '400 700',
+  variable: '--font-sans',
   display: 'swap'
 });
 
 export const metadata: Metadata = {
-  title: 'Interactive 3D Education Journey — Virtual Fitting Room Portfolio',
+  title: 'Nusantara Aceh: 23 Negeri, Satu Tanah Rencong',
   description:
-    'Portofolio interaktif perjalanan pendidikan 3D (SMPN 1 Peureulak, SMKN Taman Fajar, Universitas Malikussaleh) menggunakan Next.js 14, React Three Fiber, GSAP, dan Web Audio API.'
+    'Peta 3D interaktif yang mengangkat kekayaan budaya, tari, musik, kuliner, dan sejarah dari 23 kabupaten dan kota di Provinsi Aceh.'
 };
 
 export default function RootLayout({
@@ -37,12 +30,11 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${orbitron.variable} ${spaceMono.variable} ${inter.variable}`}
+      className={`${fraunces.variable} ${instrumentSans.variable}`}
     >
-      <body className="bg-[#05080a] font-mono text-[#e8eef0] antialiased">
+      <body className="bg-[#0b1220] font-sans text-[#f3efe6] antialiased">
         {children}
       </body>
     </html>
   );
 }
-

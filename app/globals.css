@@ -3,380 +3,72 @@
 @tailwind utilities;
 
 :root {
-  --neon: #a8ff60;
-  --bg: #05080a;
-  --chamfer-lg: polygon(
-    14px 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    14px 100%,
-    0 calc(100% - 14px),
-    0 14px
-  );
-  --chamfer-sm: polygon(
-    9px 0,
-    calc(100% - 9px) 0,
-    100% 9px,
-    100% calc(100% - 9px),
-    calc(100% - 9px) 100%,
-    9px 100%,
-    0 calc(100% - 9px),
-    0 9px
-  );
+  color-scheme: dark;
+  --accent-color: #2ec4b6;
 }
 
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 html,
 body {
+  margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #05080a;
-  color: #e8eef0;
+  background-color: #0b1220;
+  color: #f3efe6;
   -webkit-font-smoothing: antialiased;
-  user-select: none;
-  -webkit-user-select: none;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Sudut Chamfer */
-.clip-chamfer {
-  clip-path: var(--chamfer-lg);
+/* Scrollbar kustom warna solid (tanpa gradasi) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.clip-chamfer-sm {
-  clip-path: var(--chamfer-sm);
+::-webkit-scrollbar-track {
+  background-color: #0b1220;
 }
 
-/* Teks Hero Bergaya Glitch / Ghost / Outline */
-.hero-main-fill {
-  color: transparent;
-  background: linear-gradient(180deg, #ffffff 12%, rgba(255, 255, 255, 0.12) 115%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.58);
+::-webkit-scrollbar-thumb {
+  background-color: #25324d;
+  border-radius: 3px;
 }
 
-.hero-ghost-top {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.22);
+::-webkit-scrollbar-thumb:hover {
+  background-color: #36486e;
 }
 
-.hero-ghost-bottom {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.14);
-}
-
-.hero-rgb-red {
-  clip-path: inset(0 0 56% 0);
-  animation: rgb-slice-1 3.4s steps(1) infinite;
-}
-
-.hero-rgb-blue {
-  clip-path: inset(52% 0 0 0);
-  animation: rgb-slice-2 2.9s steps(1) infinite;
-}
-
-@keyframes rgb-slice-1 {
-  0%,
-  100% {
-    clip-path: inset(0 0 56% 0);
-    transform: translate(-3px, 0);
-  }
-  32% {
-    clip-path: inset(12% 0 68% 0);
-    transform: translate(-6px, 1px);
-  }
-  34% {
-    clip-path: inset(0 0 56% 0);
-    transform: translate(-3px, 0);
-  }
-  74% {
-    clip-path: inset(42% 0 28% 0);
-    transform: translate(-4px, -1px);
-  }
-  76% {
-    clip-path: inset(0 0 56% 0);
-    transform: translate(-3px, 0);
-  }
-}
-
-@keyframes rgb-slice-2 {
-  0%,
-  100% {
-    clip-path: inset(52% 0 0 0);
-    transform: translate(3px, 0);
-  }
-  44% {
-    clip-path: inset(68% 0 12% 0);
-    transform: translate(6px, -1px);
-  }
-  46% {
-    clip-path: inset(52% 0 0 0);
-    transform: translate(3px, 0);
-  }
-  82% {
-    clip-path: inset(18% 0 58% 0);
-    transform: translate(5px, 1px);
-  }
-  84% {
-    clip-path: inset(52% 0 0 0);
-    transform: translate(3px, 0);
-  }
-}
-
-.menu-stroke-text {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.58);
-}
-
-.card-outline-num {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(168, 255, 96, 0.85);
-}
-
-/* Carousel Tumpukan Kartu 3D Kanan */
-.card-perspective {
-  perspective: 1150px;
-}
-
-.outfit-card {
-  transform-style: preserve-3d;
-  transition:
-    transform 0.78s cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 0.55s ease,
-    filter 0.35s ease;
-  filter: drop-shadow(0 0 12px rgba(168, 255, 96, 0.36));
-}
-
-.outfit-card[data-pos='0'] {
-  z-index: 30;
-  opacity: 1;
-  transform: translate3d(0, 0, 0) rotateY(var(--ry, -6deg)) rotateX(var(--rx, 0deg));
-}
-
-.outfit-card[data-pos='0']:hover {
-  filter: drop-shadow(0 0 24px rgba(168, 255, 96, 0.78));
-}
-
-.outfit-card[data-pos='1'] {
-  z-index: 20;
-  opacity: 0.78;
-  transform: translate3d(34%, 0, -135px) rotateY(-26deg) scale(0.93);
-  filter: drop-shadow(0 0 6px rgba(168, 255, 96, 0.2)) brightness(0.68);
-}
-
-.outfit-card[data-pos='2'] {
-  z-index: 10;
-  opacity: 0.48;
-  transform: translate3d(58%, 0, -260px) rotateY(-34deg) scale(0.87);
-  filter: drop-shadow(0 0 4px rgba(168, 255, 96, 0.14)) brightness(0.48);
-}
-
-.outfit-card[data-pos='1']:hover,
-.outfit-card[data-pos='2']:hover {
-  filter: drop-shadow(0 0 14px rgba(168, 255, 96, 0.5)) brightness(0.92);
-}
-
-.card-scanline {
-  top: -35%;
-  animation: card-scan 3.6s linear infinite;
-}
-
-@keyframes card-scan {
-  to {
-    top: 115%;
-  }
-}
-
-/* Progress Bar Shine */
-.xp-bar-shine {
-  position: relative;
-  overflow: hidden;
-}
-
-.xp-bar-shine::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.65),
-    transparent
-  );
-  animation: xp-shine 1.9s linear infinite;
-}
-
-@keyframes xp-shine {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-
-/* Equalizer Bars */
-.eq-bar {
-  height: 100%;
-  animation: eq-bounce 0.9s ease-in-out infinite;
-}
-
-.eq-bar-1 {
-  animation-duration: 0.85s;
-}
-.eq-bar-2 {
-  animation-delay: -0.28s;
-  animation-duration: 0.72s;
-}
-.eq-bar-3 {
-  animation-delay: -0.55s;
-  animation-duration: 1.1s;
-}
-.eq-bar-4 {
-  animation-delay: -0.15s;
-  animation-duration: 0.68s;
-}
-
-@keyframes eq-bounce {
-  0%,
-  100% {
-    transform: scaleY(0.22);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-/* Volume Slider */
-.volume-slider {
+/* Range input slider volume warna solid */
+input[type='range'].solid-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    #a8ff60 var(--vol-pct, 72%),
-    rgba(255, 255, 255, 0.18) var(--vol-pct, 72%)
-  );
+  height: 4px;
+  background-color: #25324d;
+  border-radius: 2px;
+  outline: none;
 }
 
-.volume-slider::-webkit-slider-thumb {
+input[type='range'].solid-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #a8ff60;
-  box-shadow: 0 0 8px #a8ff60;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background-color: var(--accent-color);
+  cursor: pointer;
+  border: 2px solid #0b1220;
 }
 
-.volume-slider::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
-  border: 0;
-  border-radius: 50%;
-  background: #a8ff60;
-  box-shadow: 0 0 8px #a8ff60;
+input[type='range'].solid-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background-color: var(--accent-color);
+  cursor: pointer;
+  border: 2px solid #0b1220;
 }
-
-/* Scanlines CRT, Grain & Edge Glitch */
-.crt-scanlines {
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.024) 0,
-    rgba(255, 255, 255, 0.024) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-}
-
-.film-grain {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 0);
-  background-size: 3px 3px;
-  animation: grain-shift 0.8s steps(5) infinite;
-}
-
-@keyframes grain-shift {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(-2%, 1%);
-  }
-  50% {
-    transform: translate(1%, -2%);
-  }
-  75% {
-    transform: translate(-1%, 2%);
-  }
-}
-
-.edge-glitch {
-  animation: edge-flicker 5.2s steps(1) infinite;
-}
-.edge-glitch-1 {
-  animation-delay: -0.9s;
-}
-.edge-glitch-2 {
-  animation-delay: -2.6s;
-}
-.edge-glitch-3 {
-  animation-delay: -3.8s;
-}
-.edge-glitch-4 {
-  animation-delay: -1.4s;
-}
-
-@keyframes edge-flicker {
-  0%,
-  88%,
-  100% {
-    opacity: 0;
-  }
-  89% {
-    opacity: 1;
-  }
-  91% {
-    opacity: 0;
-  }
-  93% {
-    opacity: 0.85;
-    transform: translateX(8px);
-  }
-  95% {
-    opacity: 0;
-  }
-}
-
-/* Scrollbar Tipis untuk InfoPanel */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(168, 255, 96, 0.4) transparent;
-}
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(168, 255, 96, 0.4);
-  border-radius: 4px;
-}
-
-/* Prefers Reduced Motion: Nonaktifkan Glitch Berlebihan */
-@media (prefers-reduced-motion: reduce) {
-  .hero-rgb-red,
-  .hero-rgb-blue,
-  .edge-glitch,
-  .film-grain,
-  .card-scanline {
-    animation: none !important;
-  }
-}
-

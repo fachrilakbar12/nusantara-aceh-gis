@@ -9,19 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        neon: '#a8ff60',
-        'neon-dim': '#6fd13a',
-        obsidian: '#05080a',
-        panel: 'rgba(14, 20, 24, 0.55)'
+        aceh: {
+          bg: '#0b1220',
+          panel: '#121a2b',
+          panelAlt: '#182238',
+          border: '#25324d',
+          text: '#f3efe6',
+          muted: '#93a0ba'
+        }
       },
       fontFamily: {
-        orbitron: ['var(--font-orbitron)', 'sans-serif'],
-        mono: ['var(--font-space-mono)', 'monospace'],
-        sans: ['var(--font-inter)', 'sans-serif']
-      },
-      boxShadow: {
-        neon: '0 0 20px rgba(168, 255, 96, 0.45)',
-        'neon-lg': '0 0 34px rgba(168, 255, 96, 0.72)'
+        display: ['var(--font-display)', 'serif'],
+        sans: ['var(--font-sans)', 'sans-serif']
       }
     }
   },
@@ -29,4 +28,3 @@ const config: Config = {
 };
 
 export default config;
-

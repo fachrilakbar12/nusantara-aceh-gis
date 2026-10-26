@@ -1,5 +1,5 @@
 {
-  "name": "interactive-3d-education-journey",
+  "name": "nusantara-aceh-3d",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -12,18 +12,14 @@
   "dependencies": {
     "@react-three/drei": "^9.114.3",
     "@react-three/fiber": "^8.17.10",
-    "@react-three/postprocessing": "^2.16.3",
     "gsap": "^3.12.5",
-    "howler": "^2.2.4",
     "next": "14.2.15",
-    "postprocessing": "^6.36.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.168.0",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@types/howler": "^2.2.11",
     "@types/node": "^20.16.5",
     "@types/react": "^18.3.10",
     "@types/react-dom": "^18.3.0",
@@ -36,4 +32,3 @@
     "typescript": "^5.6.2"
   }
 }
-
