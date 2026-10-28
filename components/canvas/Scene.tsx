@@ -6,7 +6,6 @@ import { THEME_COLORS } from '@/lib/colors';
 import { LightingMode, useAcehStore } from '@/lib/store';
 import AcehMap from './AcehMap';
 import Sea from './Sea';
-import Clouds from './Clouds';
 import CameraRig from './CameraRig';
 
 const LIGHTING_PRESETS: Record<
@@ -26,35 +25,35 @@ const LIGHTING_PRESETS: Record<
   malam: {
     bg: THEME_COLORS.bg,
     hemiSky: '#fff4e0',
-    hemiGround: '#162847',
-    hemiIntensity: 0.72,
+    hemiGround: '#1e3357',
+    hemiIntensity: 0.88,
     keyPos: [5.2, 9.2, 4.6],
-    keyColor: '#ffe6c2',
-    keyIntensity: 1.65,
-    rimColor: '#4cc9f0',
-    rimIntensity: 0.85
+    keyColor: '#ffe8cc',
+    keyIntensity: 1.85,
+    rimColor: '#64d2ff',
+    rimIntensity: 0.95
   },
   senja: {
     bg: '#141326',
-    hemiSky: '#ffb347',
-    hemiGround: '#241938',
-    hemiIntensity: 0.78,
+    hemiSky: '#ffc078',
+    hemiGround: '#2d1f42',
+    hemiIntensity: 0.92,
     keyPos: [-6.8, 5.4, 5.2], // Sudut matahari sore rendah untuk bayangan jatuh memanjang
-    keyColor: '#ff9f43',
-    keyIntensity: 1.9,
-    rimColor: '#c77dff',
-    rimIntensity: 0.92
+    keyColor: '#ffa94d',
+    keyIntensity: 2.1,
+    rimColor: '#d084ff',
+    rimIntensity: 1.05
   },
   siang: {
     bg: '#10243e',
     hemiSky: '#ffffff',
-    hemiGround: '#1d3b66',
-    hemiIntensity: 0.95,
+    hemiGround: '#24487a',
+    hemiIntensity: 1.05,
     keyPos: [4.5, 10.5, 5.5],
-    keyColor: '#fffaf0',
-    keyIntensity: 1.85,
-    rimColor: '#90e0ef',
-    rimIntensity: 0.75
+    keyColor: '#ffffff',
+    keyIntensity: 2.15,
+    rimColor: '#a0e7ff',
+    rimIntensity: 0.9
   }
 };
 
@@ -74,14 +73,15 @@ export default function Scene() {
 
   return (
     <div
-      className="absolute inset-0 z-0 h-full w-full transition-colors duration-700"
-      style={{ backgroundColor: preset.bg }}
+      className="absolute inset-0 z-0 h-full w-full transition-colors duration-700 touch-none"
+      style={{ backgroundColor: preset.bg, touchAction: 'none' }}
     >
       <Canvas
         shadows="soft"
         dpr={[1, 2]}
         frameloop="always"
-        camera={{ position: [-4.6, 2.7, 7.4], fov: 35, near: 0.1, far: 45 }}
+        style={{ touchAction: 'none' }}
+        camera={{ position: [-4.6, 2.7, 7.4], fov: 35, near: 0.1, far: 50 }}
         onPointerMissed={() => {
           const store = useAcehStore.getState();
           store.setTourPlaying(false);
@@ -89,8 +89,11 @@ export default function Scene() {
         }}
       >
         <color attach="background" args={[preset.bg]} />
-        {/* Fog satu warna solid sesuai suasana cahaya */}
-        <fog attach="fog" args={[preset.bg, 10.5, 24]} />
+        {/* Fog ditempatkan jauh di luar jangkauan kamera mobile maupun desktop agar tidak menggelapkan peta */}
+        <fog attach="fog" args={[preset.bg, 42, 95]} />
+
+        {/* Cahaya ambien merata agar warna diorama tetap terang & konsisten di layar HP */}
+        <ambientLight intensity={0.42} color="#ffffff" />
 
         <hemisphereLight
           args={[preset.hemiSky, preset.hemiGround, preset.hemiIntensity]}
@@ -120,7 +123,6 @@ export default function Scene() {
 
         <Sea reducedMotion={reducedMotion} />
         <AcehMap reducedMotion={reducedMotion} />
-        <Clouds reducedMotion={reducedMotion} />
         <CameraRig reducedMotion={reducedMotion} />
       </Canvas>
     </div>

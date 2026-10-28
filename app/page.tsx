@@ -14,6 +14,7 @@ import RegionList from '@/components/ui/RegionList';
 import Legend from '@/components/ui/Legend';
 import Tooltip from '@/components/ui/Tooltip';
 import Toast from '@/components/ui/Toast';
+import MapControls from '@/components/ui/MapControls';
 
 const Scene = dynamic(() => import('@/components/canvas/Scene'), {
   ssr: false
@@ -119,6 +120,9 @@ export default function HomePage() {
 
       {/* Footer Mini-Legend & Modal Sumber/Tradisi Lintas Aceh */}
       <Legend />
+
+      {/* Kontrol Navigasi Peta (Zoom In, Zoom Out, Pandangan Atas, 3D) */}
+      <MapControls />
 
       {/* Transisi Awan Sinematik & The Light of Aceh */}
       <CloudTransition />

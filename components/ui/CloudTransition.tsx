@@ -3,179 +3,249 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import gsap from 'gsap';
+import { audioEngine } from '@/lib/audio';
 import { useAcehStore } from '@/lib/store';
 
 export default function CloudTransition() {
   const isCloudTransitioning = useAcehStore((s) => s.isCloudTransitioning);
   const setCloudTransitioning = useAcehStore((s) => s.setCloudTransitioning);
+  const setLogoDocked = useAcehStore((s) => s.setLogoDocked);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
   const leftCloudRef = useRef<HTMLDivElement>(null);
   const rightCloudRef = useRef<HTMLDivElement>(null);
-  const topCloudRef = useRef<HTMLDivElement>(null);
-  const bottomCloudRef = useRef<HTMLDivElement>(null);
+  const centerMistRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   const logoWrapperRef = useRef<HTMLDivElement>(null);
   const spark1Ref = useRef<HTMLDivElement>(null);
   const spark2Ref = useRef<HTMLDivElement>(null);
 
-  const [isActive, setIsActive] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (!isCloudTransitioning) {
-      setIsActive(false);
+      setIsVisible(false);
       return;
     }
 
-    setIsActive(true);
+    setIsVisible(true);
+  }, [isCloudTransitioning]);
+
+  useEffect(() => {
+    if (!isVisible || !isCloudTransitioning) return;
 
     const isMobile = window.innerWidth < 768;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Tunggu 1 frame agar elemen DOM terpasang sempurna
-    const raf = requestAnimationFrame(() => {
+    // Safety timeout: jika animasi terhambat di browser, pastikan awan tidak pernah macet
+    const fallbackTimer = setTimeout(() => {
+      setLogoDocked(true);
+      setCloudTransitioning(false);
+      setIsVisible(false);
+    }, 4800);
+
+    const ctx = gsap.context(() => {
       if (!containerRef.current || !logoWrapperRef.current) return;
 
-      const tl = gsap.timeline({
-        onComplete: () => {
-          setIsActive(false);
-          setCloudTransitioning(false);
-        }
-      });
-
-      // Target akhir posisi badge di header ("di ujung atas di bawah logo")
       const targetBadge = document.getElementById('the-light-of-aceh-badge');
-      let targetX = isMobile ? 12 : 24;
-      let targetY = isMobile ? 54 : 64;
-      let targetScale = isMobile ? 0.28 : 0.34;
+      let targetX = isMobile ? 65 : 95;
+      let targetY = isMobile ? 54 : 68;
+      let targetScale = isMobile ? 0.32 : 0.38;
+
+      const initialLogoWidth = isMobile ? 260 : 340;
 
       if (targetBadge) {
         const rect = targetBadge.getBoundingClientRect();
         targetX = rect.left + rect.width / 2;
         targetY = rect.top + rect.height / 2;
-        // Rasio skala logo dari ukuran tengah (~320px) ke ukuran header (~110px)
-        const logoWidth = isMobile ? 260 : 340;
-        targetScale = Math.max(0.24, Math.min(0.38, rect.width / logoWidth));
+        const targetInnerWidth = Math.max(70, rect.width - 16);
+        targetScale = targetInnerWidth / initialLogoWidth;
       }
 
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
 
-      // 1. Kondisi Awal
+      // Inisialisasi posisi elemen
       gsap.set(logoWrapperRef.current, {
         x: centerX,
         y: centerY,
         xPercent: -50,
         yPercent: -50,
-        scale: 0.72,
+        scale: 0.82,
         opacity: 0,
-        filter: 'drop-shadow(0 0 10px rgba(249,199,79,0.3)) drop-shadow(0 15px 25px rgba(0,0,0,0.5))'
+        filter: 'drop-shadow(0 0 12px rgba(249,199,79,0.35))'
       });
 
+      if (backdropRef.current) {
+        gsap.set(backdropRef.current, { opacity: 0.85 });
+      }
       if (leftCloudRef.current) {
-        gsap.set(leftCloudRef.current, { xPercent: 0, opacity: 1 });
+        gsap.set(leftCloudRef.current, { x: 0, opacity: 1 });
       }
       if (rightCloudRef.current) {
-        gsap.set(rightCloudRef.current, { xPercent: 0, opacity: 1 });
+        gsap.set(rightCloudRef.current, { x: 0, opacity: 1 });
       }
-      if (topCloudRef.current) {
-        gsap.set(topCloudRef.current, { yPercent: 0, opacity: 1 });
-      }
-      if (bottomCloudRef.current) {
-        gsap.set(bottomCloudRef.current, { yPercent: 0, opacity: 1 });
+      if (centerMistRef.current) {
+        gsap.set(centerMistRef.current, { scale: 1, opacity: 0.95 });
       }
       if (glowRef.current) {
-        gsap.set(glowRef.current, { scale: 0.5, opacity: 0 });
+        gsap.set(glowRef.current, { scale: 0.7, opacity: 0 });
+      }
+      if (spark1Ref.current && spark2Ref.current) {
+        gsap.set([spark1Ref.current, spark2Ref.current], { scale: 0, opacity: 0 });
       }
 
-      const durationMultiplier = reducedMotion ? 0.4 : 1.0;
+      const mult = reducedMotion ? 0.5 : 1.0;
+      const tl = gsap.timeline({
+        onComplete: () => {
+          clearTimeout(fallbackTimer);
+          setLogoDocked(true);
+          setCloudTransitioning(false);
+          setIsVisible(false);
+        }
+      });
 
-      // 2. Tahap 1: Teks muncul di tengah, menyatu dalam awan dan mulai menyala
+      // SFX 1: Deru awan menyelimuti layar
+      audioEngine.playCloudSweep();
+
+      // ==========================================
+      // FASE 1: (0.0s - 1.1s)
+      // Awan berkumpul & Logo The Light of Aceh muncul di tengah
+      // ==========================================
       tl.to(
         logoWrapperRef.current,
         {
-          scale: 1.06,
+          scale: 1.08,
           opacity: 1,
-          duration: 0.75 * durationMultiplier,
-          ease: 'power3.out'
+          duration: 1.0 * mult,
+          ease: 'power2.out'
         },
-        0
+        0.1
       )
         .to(
           glowRef.current,
           {
-            scale: 1.4,
-            opacity: 0.95,
-            duration: 0.8 * durationMultiplier,
+            scale: 1.3,
+            opacity: 0.85,
+            duration: 1.0 * mult,
             ease: 'power2.out'
           },
-          0.1
+          0.15
         )
-        // Kilau intan emas menyala
+        // Kilau intan emas mulai bersinar
         .to(
           [spark1Ref.current, spark2Ref.current],
           {
-            scale: 1.2,
+            scale: 1.25,
             opacity: 1,
             rotation: 45,
-            duration: 0.5 * durationMultiplier,
-            stagger: 0.1,
+            duration: 0.7 * mult,
+            stagger: 0.12,
             ease: 'back.out(2)'
           },
-          0.25
+          0.35
         )
-        // 3. Tahap 2: Puncak nyala terang ("menyala") dan awan mulai memudar & membelah
+
+        // ==========================================
+        // FASE 2: (1.1s - 2.4s)
+        // "Menyatu dalam pudarnya awan dan menyala"
+        // SFX 2: Akor kristal keemasan surgawi
+        // ==========================================
+        .call(
+          () => {
+            audioEngine.playLightOfAcehGlow();
+          },
+          [],
+          1.1 * mult
+        )
+        // Puncak nyala terang keemasan (golden bloom)
         .to(
           logoWrapperRef.current,
           {
+            scale: 1.14,
             filter:
-              'drop-shadow(0 0 35px rgba(249,199,79,0.95)) drop-shadow(0 0 65px rgba(243,156,18,0.75)) drop-shadow(0 20px 30px rgba(0,0,0,0.7))',
-            duration: 0.45 * durationMultiplier,
+              'drop-shadow(0 0 32px rgba(249,199,79,1)) drop-shadow(0 0 65px rgba(243,156,18,0.85)) drop-shadow(0 15px 30px rgba(0,0,0,0.6))',
+            duration: 0.8 * mult,
             ease: 'sine.inOut'
           },
-          0.7 * durationMultiplier
+          1.1 * mult
         )
-        // Awan membelah ke kiri, kanan, atas, dan bawah
+        .to(
+          glowRef.current,
+          {
+            scale: 1.6,
+            opacity: 1,
+            duration: 0.75 * mult,
+            ease: 'sine.inOut'
+          },
+          1.15 * mult
+        )
+        .to(
+          [spark1Ref.current, spark2Ref.current],
+          {
+            scale: 1.5,
+            rotation: 135,
+            duration: 0.9 * mult,
+            ease: 'power2.out'
+          },
+          1.2 * mult
+        )
+        // Awan membelah ke samping & memudar anggun
         .to(
           leftCloudRef.current,
           {
-            xPercent: -125,
+            x: -window.innerWidth * 0.75,
             opacity: 0,
-            duration: 1.35 * durationMultiplier,
-            ease: 'power3.inOut'
+            duration: 1.4 * mult,
+            ease: 'power2.inOut'
           },
-          0.65 * durationMultiplier
+          1.15 * mult
         )
         .to(
           rightCloudRef.current,
           {
-            xPercent: 125,
+            x: window.innerWidth * 0.75,
             opacity: 0,
-            duration: 1.35 * durationMultiplier,
-            ease: 'power3.inOut'
-          },
-          0.65 * durationMultiplier
-        )
-        .to(
-          [topCloudRef.current, bottomCloudRef.current],
-          {
-            opacity: 0,
-            duration: 0.95 * durationMultiplier,
+            duration: 1.4 * mult,
             ease: 'power2.inOut'
           },
-          0.75 * durationMultiplier
+          1.15 * mult
+        )
+        .to(
+          centerMistRef.current,
+          {
+            scale: 1.55,
+            opacity: 0,
+            duration: 1.25 * mult,
+            ease: 'power2.inOut'
+          },
+          1.2 * mult
+        )
+        .to(
+          backdropRef.current,
+          {
+            opacity: 0,
+            duration: 1.2 * mult,
+            ease: 'power2.inOut'
+          },
+          1.2 * mult
         )
         .to(
           glowRef.current,
           {
             opacity: 0,
-            scale: 0.8,
-            duration: 0.6 * durationMultiplier,
+            scale: 0.9,
+            duration: 0.75 * mult,
             ease: 'power2.in'
           },
-          1.15 * durationMultiplier
+          1.85 * mult
         )
-        // 4. Tahap 3: Teks meluncur & bertransisi ke ujung atas di bawah logo
+
+        // ==========================================
+        // FASE 3: (2.3s - 3.6s)
+        // Meluncur halus & bersandar di bawah logo header
+        // ==========================================
         .to(
           logoWrapperRef.current,
           {
@@ -183,30 +253,43 @@ export default function CloudTransition() {
             y: targetY,
             scale: targetScale,
             filter:
-              'drop-shadow(0 0 8px rgba(249,199,79,0.65)) drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
-            duration: 1.15 * durationMultiplier,
+              'drop-shadow(0 0 6px rgba(249,199,79,0.7)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+            duration: 1.25 * mult,
             ease: 'power3.inOut'
           },
-          1.15 * durationMultiplier
+          2.25 * mult
         )
         .to(
           [spark1Ref.current, spark2Ref.current],
           {
             opacity: 0,
-            scale: 0.3,
-            duration: 0.4 * durationMultiplier,
+            scale: 0.2,
+            duration: 0.5 * mult,
             ease: 'power2.in'
           },
-          1.4 * durationMultiplier
+          2.35 * mult
+        )
+
+        // ==========================================
+        // FASE 4: (3.5s - 3.7s)
+        // Mendarat di Header & SFX 3: Denting kristal (Dock Shimmer)
+        // ==========================================
+        .call(
+          () => {
+            audioEngine.playDockShimmer();
+          },
+          [],
+          3.45 * mult
         );
-    });
+    }, containerRef);
 
     return () => {
-      cancelAnimationFrame(raf);
+      clearTimeout(fallbackTimer);
+      ctx.revert();
     };
-  }, [isCloudTransitioning, setCloudTransitioning]);
+  }, [isVisible, isCloudTransitioning, setCloudTransitioning, setLogoDocked]);
 
-  if (!isActive) return null;
+  if (!isVisible && !isCloudTransitioning) return null;
 
   return (
     <div
@@ -214,94 +297,118 @@ export default function CloudTransition() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
     >
-      {/* 1. Lapisan Awan Kertas Kiri (Papercut Cloud Bank Left) */}
+      {/* 1. Latar Belakang Kabut Gelap Halus */}
+      <div
+        ref={backdropRef}
+        className="absolute inset-0 bg-[#0b1220]/75 backdrop-blur-[2px]"
+      />
+
+      {/* 2. Gumpalan Awan Lembut Kiri (Volumetric Organic Mist) */}
       <div
         ref={leftCloudRef}
-        className="absolute -left-12 -top-12 bottom-0 w-[58vw] max-w-[850px] select-none"
+        className="absolute -left-20 -top-20 -bottom-20 w-[60vw] max-w-[800px] select-none pointer-events-none"
       >
-        <svg
-          viewBox="0 0 600 800"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-full w-full drop-shadow-2xl"
-        >
-          {/* Lapisan Awan Belakang */}
-          <path
-            d="M-50,0 Q180,60 220,180 T340,360 T260,540 T380,720 T-50,850 Z"
-            fill="#0f192b"
-            opacity="0.9"
+        <div className="relative h-full w-full">
+          {/* Puff Awan 1 */}
+          <div
+            className="absolute left-0 top-1/4 h-[440px] w-[520px] rounded-full filter blur-[32px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(250,248,242,0.8) 50%, rgba(255,255,255,0) 72%)'
+            }}
           />
-          {/* Lapisan Awan Tengah */}
-          <path
-            d="M-50,30 Q140,110 180,240 T300,420 T210,600 T310,780 T-50,850 Z"
-            fill="#1e2c47"
-            opacity="0.85"
+          {/* Puff Awan 2 */}
+          <div
+            className="absolute left-[15%] top-1/2 h-[400px] w-[480px] -translate-y-1/2 rounded-full filter blur-[28px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,253,248,0.92) 0%, rgba(248,242,230,0.75) 52%, rgba(255,255,255,0) 74%)'
+            }}
           />
-          {/* Lapisan Awan Depan Putih Kertas Lembut */}
-          <path
-            d="M-50,60 Q100,160 140,300 T250,480 T170,660 T260,820 T-50,850 Z"
-            fill="#f3efe6"
-            opacity="0.16"
+          {/* Puff Awan 3 Atas */}
+          <div
+            className="absolute left-[5%] top-0 h-[380px] w-[460px] rounded-full filter blur-[35px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(251,246,236,0.7) 48%, rgba(255,255,255,0) 72%)'
+            }}
           />
-        </svg>
+          {/* Puff Awan 4 Bawah */}
+          <div
+            className="absolute left-[5%] bottom-0 h-[400px] w-[480px] rounded-full filter blur-[35px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(251,246,236,0.7) 48%, rgba(255,255,255,0) 72%)'
+            }}
+          />
+        </div>
       </div>
 
-      {/* 2. Lapisan Awan Kertas Kanan (Papercut Cloud Bank Right) */}
+      {/* 3. Gumpalan Awan Lembut Kanan (Volumetric Organic Mist) */}
       <div
         ref={rightCloudRef}
-        className="absolute -right-12 -top-12 bottom-0 w-[58vw] max-w-[850px] select-none"
+        className="absolute -right-20 -top-20 -bottom-20 w-[60vw] max-w-[800px] select-none pointer-events-none"
       >
-        <svg
-          viewBox="0 0 600 800"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-full w-full drop-shadow-2xl"
-        >
-          {/* Lapisan Awan Belakang */}
-          <path
-            d="M650,0 Q420,60 380,180 T260,360 T340,540 T220,720 T650,850 Z"
-            fill="#0f192b"
-            opacity="0.9"
+        <div className="relative h-full w-full">
+          {/* Puff Awan 1 */}
+          <div
+            className="absolute right-0 top-1/4 h-[440px] w-[520px] rounded-full filter blur-[32px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(250,248,242,0.8) 50%, rgba(255,255,255,0) 72%)'
+            }}
           />
-          {/* Lapisan Awan Tengah */}
-          <path
-            d="M650,30 Q460,110 420,240 T300,420 T390,600 T290,780 T650,850 Z"
-            fill="#1e2c47"
-            opacity="0.85"
+          {/* Puff Awan 2 */}
+          <div
+            className="absolute right-[15%] top-1/2 h-[400px] w-[480px] -translate-y-1/2 rounded-full filter blur-[28px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,253,248,0.92) 0%, rgba(248,242,230,0.75) 52%, rgba(255,255,255,0) 74%)'
+            }}
           />
-          {/* Lapisan Awan Depan Putih Kertas Lembut */}
-          <path
-            d="M650,60 Q500,160 460,300 T350,480 T430,660 T340,820 T650,850 Z"
-            fill="#f3efe6"
-            opacity="0.16"
+          {/* Puff Awan 3 Atas */}
+          <div
+            className="absolute right-[5%] top-0 h-[380px] w-[460px] rounded-full filter blur-[35px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(251,246,236,0.7) 48%, rgba(255,255,255,0) 72%)'
+            }}
           />
-        </svg>
+          {/* Puff Awan 4 Bawah */}
+          <div
+            className="absolute right-[5%] bottom-0 h-[400px] w-[480px] rounded-full filter blur-[35px]"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(251,246,236,0.7) 48%, rgba(255,255,255,0) 72%)'
+            }}
+          />
+        </div>
       </div>
 
-      {/* 3. Kabut Awan Lembut Atas & Bawah */}
+      {/* 4. Kabut Tengah Lembut (Penyatu Teks & Awan) */}
       <div
-        ref={topCloudRef}
-        className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-[#0b1220]/95 via-[#0b1220]/60 to-transparent"
-      />
-      <div
-        ref={bottomCloudRef}
-        className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#0b1220]/95 via-[#0b1220]/60 to-transparent"
-      />
-
-      {/* 4. Lingkaran Aura Cahaya Emas ("Menyala") */}
-      <div
-        ref={glowRef}
-        className="absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        ref={centerMistRef}
+        className="absolute left-1/2 top-1/2 h-[500px] w-[650px] -translate-x-1/2 -translate-y-1/2 rounded-full filter blur-[40px] pointer-events-none"
         style={{
           background:
-            'radial-gradient(circle, rgba(249,199,79,0.55) 0%, rgba(243,156,18,0.28) 38%, rgba(11,18,32,0) 72%)'
+            'radial-gradient(circle, rgba(255,255,255,0.85) 0%, rgba(254,250,240,0.6) 38%, rgba(255,255,255,0) 72%)'
         }}
       />
 
-      {/* 5. Teks & Logo HD The Light of Aceh yang Bertransisi */}
+      {/* 5. Aura Cahaya Emas ("Menyala") */}
+      <div
+        ref={glowRef}
+        className="absolute left-1/2 top-1/2 h-[480px] w-[480px] -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(249,199,79,0.7) 0%, rgba(243,156,18,0.35) 42%, rgba(11,18,32,0) 72%)'
+        }}
+      />
+
+      {/* 6. Teks & Logo HD The Light of Aceh yang Bertransisi */}
       <div
         ref={logoWrapperRef}
-        className="absolute left-0 top-0 z-10 will-change-transform"
+        className="absolute left-0 top-0 z-10 will-change-transform pointer-events-none"
         style={{ transformOrigin: 'center center' }}
       >
         <div className="relative flex flex-col items-center">
@@ -331,10 +438,10 @@ export default function CloudTransition() {
           <Image
             src="/images/the-light-of-aceh-hd.png"
             alt="The Light of Aceh"
-            width={410}
-            height={227}
+            width={360}
+            height={200}
             priority
-            className="h-auto w-[280px] max-w-[85vw] select-none object-contain sm:w-[350px] md:w-[410px]"
+            className="h-auto w-[250px] max-w-[85vw] select-none object-contain sm:w-[320px] md:w-[360px]"
             style={{
               imageRendering: 'crisp-edges'
             }}

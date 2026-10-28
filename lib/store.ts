@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { REGIONS_ACEH } from './regions';
 
 export type LightingMode = 'malam' | 'senja' | 'siang';
+export type CameraAction = 'zoomIn' | 'zoomOut' | 'viewTop' | 'resetOverview';
 
 export interface RippleEvent {
   id: number;
@@ -25,9 +26,15 @@ interface AcehStoreState {
   lightingMode: LightingMode;
   isTourPlaying: boolean;
   isCloudTransitioning: boolean;
+  isLogoDocked: boolean;
+  isTopView: boolean;
+  cameraActionTrigger: { action: CameraAction; timestamp: number } | null;
 
   setEntered: (entered: boolean) => void;
   setCloudTransitioning: (val: boolean) => void;
+  setLogoDocked: (val: boolean) => void;
+  setIsTopView: (val: boolean) => void;
+  triggerCameraAction: (action: CameraAction) => void;
   selectRegion: (regionId: string | null) => void;
   nextRegion: () => string;
   prevRegion: () => string;
@@ -60,11 +67,18 @@ export const useAcehStore = create<AcehStoreState>((set, get) => ({
   lightingMode: 'malam',
   isTourPlaying: false,
   isCloudTransitioning: false,
+  isLogoDocked: false,
+  isTopView: false,
+  cameraActionTrigger: null,
 
-  setEntered: (entered) => set({ hasEntered: entered }),
+  setEntered: (entered) => set({ hasEntered: entered, isTopView: false }),
   setCloudTransitioning: (val) => set({ isCloudTransitioning: val }),
+  setLogoDocked: (val) => set({ isLogoDocked: val }),
+  setIsTopView: (val) => set({ isTopView: val }),
+  triggerCameraAction: (action) =>
+    set({ cameraActionTrigger: { action, timestamp: Date.now() } }),
 
-  selectRegion: (regionId) => set({ activeRegionId: regionId }),
+  selectRegion: (regionId) => set({ activeRegionId: regionId, isTopView: false }),
 
   nextRegion: () => {
     const current = get().activeRegionId;

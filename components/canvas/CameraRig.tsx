@@ -17,6 +17,7 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const hasEntered = useAcehStore((s) => s.hasEntered);
   const activeRegionId = useAcehStore((s) => s.activeRegionId);
+  const cameraActionTrigger = useAcehStore((s) => s.cameraActionTrigger);
 
   const isDraggingRef = useRef(false);
   const isAnimatingRef = useRef(false);
@@ -198,6 +199,115 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
     };
   }, [activeRegionId, hasEntered, camera, reducedMotion, isMobile]);
 
+  // Kontrol Aksi Kamera Programatik (Zoom In, Zoom Out, Pandangan Atas, Reset 3D)
+  useEffect(() => {
+    if (!cameraActionTrigger || !controlsRef.current) return;
+    const { action } = cameraActionTrigger;
+    const controls = controlsRef.current;
+
+    audioEngine.playHoverTick();
+
+    if (action === 'zoomIn') {
+      const dir = camera.position.clone().sub(controls.target);
+      const currentLen = dir.length();
+      const targetLen = Math.max(1.4, currentLen * 0.72);
+      dir.setLength(targetLen);
+      const dest = controls.target.clone().add(dir);
+
+      gsap.to(camera.position, {
+        x: dest.x,
+        y: dest.y,
+        z: dest.z,
+        duration: 0.35,
+        ease: 'power2.out',
+        onUpdate: () => controls.update()
+      });
+    } else if (action === 'zoomOut') {
+      const dir = camera.position.clone().sub(controls.target);
+      const currentLen = dir.length();
+      const targetLen = Math.min(26.0, currentLen * 1.35);
+      dir.setLength(targetLen);
+      const dest = controls.target.clone().add(dir);
+
+      gsap.to(camera.position, {
+        x: dest.x,
+        y: dest.y,
+        z: dest.z,
+        duration: 0.35,
+        ease: 'power2.out',
+        onUpdate: () => controls.update()
+      });
+    } else if (action === 'viewTop') {
+      // Pandangan Atas Peta Penuh (Bird's Eye Top-Down View)
+      audioEngine.playCameraWhoosh();
+      isAnimatingRef.current = true;
+      const topPos: [number, number, number] = isMobile ? [0, 16.0, 0.05] : [0, 12.5, 0.05];
+      baseTargetRef.current = OVERVIEW_TARGET;
+
+      const proxy = { t: 0 };
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+
+      gsap.to(proxy, {
+        t: 1,
+        duration: reducedMotion ? 0.4 : 1.2,
+        ease: 'power3.inOut',
+        onUpdate: () => {
+          const p = proxy.t;
+          camera.position.set(
+            THREE.MathUtils.lerp(startPos.x, topPos[0], p),
+            THREE.MathUtils.lerp(startPos.y, topPos[1], p),
+            THREE.MathUtils.lerp(startPos.z, topPos[2], p)
+          );
+          controls.target.set(
+            THREE.MathUtils.lerp(startTarget.x, OVERVIEW_TARGET[0], p),
+            THREE.MathUtils.lerp(startTarget.y, OVERVIEW_TARGET[1], p),
+            THREE.MathUtils.lerp(startTarget.z, OVERVIEW_TARGET[2], p)
+          );
+          controls.update();
+        },
+        onComplete: () => {
+          isAnimatingRef.current = false;
+          useAcehStore.getState().setIsTopView(true);
+        }
+      });
+    } else if (action === 'resetOverview') {
+      // Kembali ke Sudut Diorama Perspektif 3D
+      audioEngine.playCameraWhoosh();
+      isAnimatingRef.current = true;
+      const overviewPos: [number, number, number] = isMobile ? [0, 8.8, 6.2] : [0, 6.35, 4.55];
+      baseTargetRef.current = OVERVIEW_TARGET;
+
+      const proxy = { t: 0 };
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+
+      gsap.to(proxy, {
+        t: 1,
+        duration: reducedMotion ? 0.4 : 1.2,
+        ease: 'power3.inOut',
+        onUpdate: () => {
+          const p = proxy.t;
+          camera.position.set(
+            THREE.MathUtils.lerp(startPos.x, overviewPos[0], p),
+            THREE.MathUtils.lerp(startPos.y, overviewPos[1], p),
+            THREE.MathUtils.lerp(startPos.z, overviewPos[2], p)
+          );
+          controls.target.set(
+            THREE.MathUtils.lerp(startTarget.x, OVERVIEW_TARGET[0], p),
+            THREE.MathUtils.lerp(startTarget.y, OVERVIEW_TARGET[1], p),
+            THREE.MathUtils.lerp(startTarget.z, OVERVIEW_TARGET[2], p)
+          );
+          controls.update();
+        },
+        onComplete: () => {
+          isAnimatingRef.current = false;
+          useAcehStore.getState().setIsTopView(false);
+        }
+      });
+    }
+  }, [cameraActionTrigger, camera, isMobile, reducedMotion]);
+
   useFrame((state, delta) => {
     if (
       reducedMotion ||
@@ -241,18 +351,19 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
       ref={controlsRef}
       enablePan={false}
       enableDamping
-      dampingFactor={0.07}
-      rotateSpeed={0.65}
-      zoomSpeed={0.8}
-      minDistance={2.2}
-      maxDistance={14.0}
-      minPolarAngle={0.32}
-      maxPolarAngle={Math.PI * 0.41}
-      minAzimuthAngle={-Math.PI * 0.46}
-      maxAzimuthAngle={Math.PI * 0.46}
+      dampingFactor={0.08}
+      rotateSpeed={0.75}
+      zoomSpeed={1.2}
+      minDistance={1.4}
+      maxDistance={28.0}
+      minPolarAngle={0.02}
+      maxPolarAngle={Math.PI * 0.45}
+      minAzimuthAngle={-Math.PI * 0.55}
+      maxAzimuthAngle={Math.PI * 0.55}
       onStart={() => {
         isDraggingRef.current = true;
         useAcehStore.getState().setTourPlaying(false);
+        useAcehStore.getState().setIsTopView(false);
       }}
       onEnd={() => {
         isDraggingRef.current = false;

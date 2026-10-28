@@ -21,6 +21,7 @@ export default function Header() {
   const isDrawerOpen = useAcehStore((s) => s.isDrawerOpen);
   const lightingMode = useAcehStore((s) => s.lightingMode);
   const isTourPlaying = useAcehStore((s) => s.isTourPlaying);
+  const isLogoDocked = useAcehStore((s) => s.isLogoDocked);
 
   const setDrawerOpen = useAcehStore((s) => s.setDrawerOpen);
   const selectRegion = useAcehStore((s) => s.selectRegion);
@@ -72,6 +73,7 @@ export default function Header() {
     audioEngine.stopExperience();
     audioEngine.playHoverTick();
     useAcehStore.getState().setCloudTransitioning(false);
+    useAcehStore.getState().setLogoDocked(false);
     setEntered(false);
   };
 
@@ -134,7 +136,9 @@ export default function Header() {
         {/* Badge HD The Light of Aceh (Di ujung atas di bawah logo) */}
         <div
           id="the-light-of-aceh-badge"
-          className="flex items-center rounded-xl border border-[#f9c74f]/35 bg-[#121a2b]/90 px-2 py-0.5 shadow-md backdrop-blur-md transition-all duration-300 hover:border-[#f9c74f] hover:shadow-[0_0_12px_rgba(249,199,79,0.35)] sm:px-2.5 sm:py-0.5"
+          className={`flex items-center rounded-xl border border-[#f9c74f]/35 bg-[#121a2b]/90 px-2.5 py-1 shadow-md backdrop-blur-md transition-all duration-300 hover:border-[#f9c74f] hover:shadow-[0_0_12px_rgba(249,199,79,0.35)] sm:px-3 sm:py-1 ${
+            isLogoDocked ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
           title="The Light of Aceh - Cahaya Aceh"
         >
           <Image
@@ -143,7 +147,7 @@ export default function Header() {
             width={120}
             height={66}
             priority
-            className="h-3.5 sm:h-4 w-auto object-contain filter drop-shadow-[0_0_6px_rgba(249,199,79,0.55)] transition-transform duration-300 hover:scale-105"
+            className="h-5 sm:h-6 w-auto object-contain filter drop-shadow-[0_0_6px_rgba(249,199,79,0.55)] transition-transform duration-300 hover:scale-105"
           />
         </div>
       </div>

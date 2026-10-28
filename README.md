@@ -82,6 +82,9 @@ Setiap kali wilayah dipilih, sistem membunyikan sintesis suara instrumen tradisi
 ## 6. Kompatibilitas Perangkat Bergerak (Mobile Support)
 
 - Responsivitas Rasio Layar: Kamera Three.js secara adaptif menyesuaikan posisi mundur dan sudut pandang (Field of View) saat dibuka di layar vertikal smartphone agar seluruh pulau tetap terlihat penuh.
+- Penyetaraan Pencahayaan: Tata cahaya dan jarak kabut diatur agar kecerahan tampilan di smartphone sama terangnya dengan versi desktop tanpa penurunan kontras.
+- Gestur Cubit (Pinch-to-Zoom): Dukungan gestur cubit dua jari untuk memperbesar dan memperkecil peta secara bebas dan mulus.
+- Pandangan Tegak Lurus dari Atas: Sudut kemiringan atas dibuka hingga sudut lurus serta dilengkapi tombol pintas untuk langsung beralih melihat seluruh 23 kabupaten dan kota dari atas.
 - Bottom Sheet Drawer: Panel informasi wilayah otomatis beralih menjadi laci sentuh bawah (bottom sheet) pada smartphone.
 - Dukungan Multi-Touch: Deteksi gestur ketukan (touch event) tanpa delay pada tombol interaksi.
 - Dukungan Akses Jaringan Lokal: Konfigurasi host jaringan lokal (0.0.0.0) sehingga dapat langsung diakses dari perangkat ponsel yang terhubung pada jaringan Wi-Fi yang sama.

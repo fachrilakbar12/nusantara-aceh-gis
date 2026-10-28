@@ -418,6 +418,110 @@ class NusantaraAudioEngine {
       }
     }
   }
+
+  /**
+   * Sound effect deru awan lembut sinematik saat transisi masuk (Cloud Sweep)
+   */
+  public playCloudSweep(): void {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain || !this.noiseBuffer) return;
+
+    const t = ctx.currentTime;
+    const duration = 2.4;
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    noise.loop = true;
+
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = 'lowpass';
+    bpf.frequency.setValueAtTime(180, t);
+    bpf.frequency.exponentialRampToValueAtTime(560, t + 0.9);
+    bpf.frequency.exponentialRampToValueAtTime(140, t + duration);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, t);
+    noiseGain.gain.linearRampToValueAtTime(0.12, t + 0.5);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+    noise.connect(bpf);
+    bpf.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+    noise.start(t);
+    noise.stop(t + duration);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(196, t);
+    osc.frequency.exponentialRampToValueAtTime(293.66, t + 1.2);
+
+    oscGain.gain.setValueAtTime(0.001, t);
+    oscGain.gain.linearRampToValueAtTime(0.07, t + 0.6);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + duration);
+  }
+
+  /**
+   * Sound effect pendaran cahaya keemasan The Light of Aceh (Golden Bloom / Celestial Glow)
+   */
+  public playLightOfAcehGlow(): void {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+
+    const t = ctx.currentTime;
+    const freqs = [329.63, 493.88, 659.25, 830.61, 987.77];
+
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+
+      const startTime = t + idx * 0.05;
+      const duration = 2.2 - idx * 0.15;
+
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.linearRampToValueAtTime(0.08 / freqs.length, startTime + 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.05);
+    });
+  }
+
+  /**
+   * Sound effect denting halus saat logo mendarat di header (Dock Shimmer)
+   */
+  public playDockShimmer(): void {
+    if (this.isMuted) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.masterGain) return;
+
+    const t = ctx.currentTime;
+    [1174.66, 1760.0].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.06);
+
+      gain.gain.setValueAtTime(0.06, t + idx * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + idx * 0.06 + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(t + idx * 0.06);
+      osc.stop(t + idx * 0.06 + 0.48);
+    });
+  }
 }
 
 export const audioEngine = new NusantaraAudioEngine();
