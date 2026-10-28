@@ -141,7 +141,7 @@ export default function Legend() {
 
             <div className="mt-4 rounded-2xl border border-[#25324d] bg-[#0b1220] p-3 text-[11px] text-[#93a0ba]">
               <h3 className="font-display text-xs font-semibold text-[#f3efe6]">
-                Sumber &amp; Catatan Verifikasi
+                Sumber &amp; Referensi Data
               </h3>
               <div className="mt-1.5 space-y-1.5">
                 <p className="border-l-2 border-[#2ec4b6] pl-2">

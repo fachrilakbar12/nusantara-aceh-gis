@@ -116,17 +116,6 @@ export default function RegionList() {
                     {item.jenis} — {item.budaya.length} budaya
                   </span>
                 </div>
-
-                <span
-                  className="shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-medium"
-                  style={{
-                    borderColor: isSelected ? item.warna : '#25324d',
-                    backgroundColor: '#121a2b',
-                    color: item.status === 'Terverifikasi' ? '#2ec4b6' : '#ffb347'
-                  }}
-                >
-                  {item.status === 'Terverifikasi' ? '✓' : '—'}
-                </span>
               </button>
             );
           })

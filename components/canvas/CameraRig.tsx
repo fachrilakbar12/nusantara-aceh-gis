@@ -311,6 +311,7 @@ export default function CameraRig({ reducedMotion }: { reducedMotion: boolean })
   useFrame((state, delta) => {
     if (
       reducedMotion ||
+      isMobile ||
       isDraggingRef.current ||
       isAnimatingRef.current ||
       !controlsRef.current

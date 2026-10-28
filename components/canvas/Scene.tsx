@@ -78,9 +78,15 @@ export default function Scene() {
     >
       <Canvas
         shadows="soft"
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         frameloop="always"
         style={{ touchAction: 'none' }}
+        gl={{
+          powerPreference: 'high-performance',
+          antialias: true,
+          stencil: false,
+          depth: true
+        }}
         camera={{ position: [-4.6, 2.7, 7.4], fov: 35, near: 0.1, far: 50 }}
         onPointerMissed={() => {
           const store = useAcehStore.getState();
@@ -112,7 +118,7 @@ export default function Scene() {
           shadow-camera-top={7.5}
           shadow-camera-bottom={-7.5}
           shadow-bias={-0.0003}
-          shadow-radius={4}
+          shadow-radius={2}
         />
 
         <directionalLight

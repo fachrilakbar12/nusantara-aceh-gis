@@ -378,42 +378,46 @@ export default function Region({ data }: RegionProps) {
       targetSpread = 0;
     }
 
-    const stiffness = 175;
-    const damping = 15;
-    const force = (targetY - yPosRef.current) * stiffness;
-    yVelRef.current += force * dt;
-    yVelRef.current *= Math.exp(-damping * dt);
-    yPosRef.current += yVelRef.current * dt;
+    const isMoving =
+      Math.abs(targetY - yPosRef.current) > 0.0003 || Math.abs(yVelRef.current) > 0.0003;
 
-    spreadRef.current = THREE.MathUtils.lerp(
-      spreadRef.current,
-      targetSpread,
-      Math.min(1, dt * 10)
-    );
+    if (isMoving) {
+      const stiffness = 175;
+      const damping = 15;
+      const force = (targetY - yPosRef.current) * stiffness;
+      yVelRef.current += force * dt;
+      yVelRef.current *= Math.exp(-damping * dt);
+      yPosRef.current += yVelRef.current * dt;
 
-    groupRef.current.position.y = yPosRef.current;
+      groupRef.current.position.y = yPosRef.current;
 
-    if (middleLayerRef.current) {
-      middleLayerRef.current.position.y = LAYER_BASE_HEIGHT + spreadRef.current;
+      spreadRef.current = THREE.MathUtils.lerp(
+        spreadRef.current,
+        targetSpread,
+        Math.min(1, dt * 10)
+      );
+
+      if (middleLayerRef.current) {
+        middleLayerRef.current.position.y = LAYER_BASE_HEIGHT + spreadRef.current;
+      }
+      if (topLayerRef.current) {
+        topLayerRef.current.position.y =
+          LAYER_BASE_HEIGHT + LAYER_MIDDLE_HEIGHT + spreadRef.current * 2.1;
+      }
     }
-    if (topLayerRef.current) {
-      topLayerRef.current.position.y =
-        LAYER_BASE_HEIGHT + LAYER_MIDDLE_HEIGHT + spreadRef.current * 2.1;
-    }
 
-    const lerpFactor = Math.min(1, dt * 11);
-    if (isActive || isHovered) {
-      topMat.color.lerp(hoverColor, lerpFactor);
-      middleMat.color.lerp(middleHoverColor, lerpFactor);
-      baseMat.color.lerp(bottomHoverColor, lerpFactor);
-    } else if (hasSelection) {
-      topMat.color.lerp(dimmedColor, lerpFactor);
-      middleMat.color.lerp(middleDimmedColor, lerpFactor);
-      baseMat.color.lerp(bottomDimmedColor, lerpFactor);
-    } else {
-      topMat.color.lerp(baseColor, lerpFactor);
-      middleMat.color.lerp(middleBaseColor, lerpFactor);
-      baseMat.color.lerp(bottomBaseColor, lerpFactor);
+    const targetTop =
+      isActive || isHovered ? hoverColor : hasSelection ? dimmedColor : baseColor;
+    const targetMid =
+      isActive || isHovered ? middleHoverColor : hasSelection ? middleDimmedColor : middleBaseColor;
+    const targetBot =
+      isActive || isHovered ? bottomHoverColor : hasSelection ? bottomDimmedColor : bottomBaseColor;
+
+    if (!topMat.color.equals(targetTop)) {
+      const lerpFactor = Math.min(1, dt * 11);
+      topMat.color.lerp(targetTop, lerpFactor);
+      middleMat.color.lerp(targetMid, lerpFactor);
+      baseMat.color.lerp(targetBot, lerpFactor);
     }
   });
 

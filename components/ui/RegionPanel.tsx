@@ -225,7 +225,6 @@ export default function RegionPanel() {
   if (!region) return null;
 
   const regionIndex = REGIONS_ACEH.findIndex((r) => r.id === region.id) + 1;
-  const isVerified = region.status === 'Terverifikasi';
   const motifInfo = getMotifForRegion(region.id);
 
   const handleStep = (dir: 'prev' | 'next') => {
@@ -283,17 +282,6 @@ export default function RegionPanel() {
           </h2>
 
           <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span
-              className="inline-flex items-center rounded-xl border px-2 py-0.5 text-[10px] font-medium sm:text-[11px]"
-              style={{
-                borderColor: isVerified ? '#2ec4b6' : '#ffb347',
-                backgroundColor: '#0b1220',
-                color: isVerified ? '#2ec4b6' : '#ffb347'
-              }}
-            >
-              <span>{region.status}</span>
-            </span>
-
             <span className="rounded-xl border border-[#25324d] bg-[#0b1220] px-2 py-0.5 text-[10px] text-[#93a0ba] sm:text-[11px]">
               {INSTRUMEN_LABEL[region.instrumenKlik]}
             </span>

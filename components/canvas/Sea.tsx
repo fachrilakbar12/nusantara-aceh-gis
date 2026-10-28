@@ -90,17 +90,8 @@ export default function Sea({ reducedMotion }: { reducedMotion: boolean }) {
   const smongWave2Ref = useRef<THREE.Group>(null);
   const smongIntensityRef = useRef(0);
 
-  const { seaGeometry, baseZ, cartographicGridGeo } = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(34, 28, 44, 36);
-    const pos = geo.attributes.position as THREE.BufferAttribute;
-    const orig = new Float32Array(pos.count);
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const z = Math.sin(x * 0.65) * Math.cos(y * 0.65) * 0.055;
-      pos.setZ(i, z);
-      orig[i] = z;
-    }
+  const { seaGeometry, cartographicGridGeo } = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(34, 28, 1, 1);
     geo.computeVertexNormals();
 
     // Grid kartografi laut (garis lintang, bujur, dan garis mata angin kompas)
@@ -130,7 +121,7 @@ export default function Sea({ reducedMotion }: { reducedMotion: boolean }) {
     const gGeo = new THREE.BufferGeometry();
     gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridVerts, 3));
 
-    return { seaGeometry: geo, baseZ: orig, cartographicGridGeo: gGeo };
+    return { seaGeometry: geo, cartographicGridGeo: gGeo };
   }, []);
 
   const materials = useMemo(() => {
@@ -245,16 +236,9 @@ export default function Sea({ reducedMotion }: { reducedMotion: boolean }) {
     materials.sea.color.lerp(new THREE.Color(targetSeaColor), Math.min(1, dt * 4));
 
     if (!reducedMotion) {
-      const pos = seaGeometry.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const y = pos.getY(i);
-        const wave =
-          Math.sin(x * 0.7 + t * 1.15) * 0.038 +
-          Math.cos(y * 0.8 - t * 0.95) * 0.032;
-        pos.setZ(i, baseZ[i] * 0.4 + wave);
+      if (seaMeshRef.current) {
+        seaMeshRef.current.position.y = Math.sin(t * 0.7) * 0.008;
       }
-      pos.needsUpdate = true;
 
       if (compassRef.current) {
         compassRef.current.rotation.y = Math.sin(t * 0.35) * 0.12;
