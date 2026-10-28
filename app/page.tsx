@@ -7,6 +7,7 @@ import { getRegionCentroid } from '@/lib/geo';
 import { REGION_BY_ID } from '@/lib/regions';
 import { useAcehStore } from '@/lib/store';
 import Intro from '@/components/ui/Intro';
+import CloudTransition from '@/components/ui/CloudTransition';
 import Header from '@/components/ui/Header';
 import RegionPanel from '@/components/ui/RegionPanel';
 import RegionList from '@/components/ui/RegionList';
@@ -118,6 +119,9 @@ export default function HomePage() {
 
       {/* Footer Mini-Legend & Modal Sumber/Tradisi Lintas Aceh */}
       <Legend />
+
+      {/* Transisi Awan Sinematik & The Light of Aceh */}
+      <CloudTransition />
 
       {/* Layar Masuk Awal */}
       <Intro />

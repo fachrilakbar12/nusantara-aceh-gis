@@ -19,7 +19,8 @@ export default function Intro() {
       console.warn('Audio start error:', err);
     }
 
-    // 2. Eksekusi state masuk secara langsung dan instan ke store
+    // 2. Aktifkan transisi awan sinematik The Light of Aceh dan status masuk
+    useAcehStore.getState().setCloudTransitioning(true);
     useAcehStore.getState().setEntered(true);
     setEntered(true);
   }, [setEntered]);

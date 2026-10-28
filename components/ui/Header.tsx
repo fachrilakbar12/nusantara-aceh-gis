@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Image from 'next/image';
 import { audioEngine } from '@/lib/audio';
 import { THEME_COLORS } from '@/lib/colors';
 import { getRegionCentroid } from '@/lib/geo';
@@ -70,62 +71,81 @@ export default function Header() {
     setDrawerOpen(false);
     audioEngine.stopExperience();
     audioEngine.playHoverTick();
+    useAcehStore.getState().setCloudTransitioning(false);
     setEntered(false);
   };
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-1 px-2.5 py-2 sm:px-6 sm:py-4">
-      {/* Kiri: Logo & Info Wilayah Aktif */}
-      <div className="pointer-events-auto flex items-center gap-1 sm:gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setTourPlaying(false);
-            selectRegion(null);
-          }}
-          className="group flex items-center gap-1.5 rounded-2xl border bg-[#121a2b]/95 p-1.5 text-left shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 sm:gap-3 sm:px-3.5 sm:py-2"
-          style={{
-            borderColor: activeRegion ? accentColor : '#25324d'
-          }}
-        >
-          <span
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-[#25324d] bg-[#0b1220] transition-transform duration-300 sm:h-8 sm:w-8 group-hover:scale-105"
-            style={{ color: accentColor }}
-            aria-hidden="true"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <polygon
-                points="12,2 17,7 19,14 19,21 5,21 5,14 7,7"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-              <polygon points="12,7 15,12 12,18 9,12" fill="currentColor" />
-            </svg>
-          </span>
-          <div className="max-w-[105px] sm:max-w-none">
-            <span className="block truncate font-display text-xs font-bold leading-none text-[#f3efe6] sm:text-base">
-              Nusantara Aceh
-            </span>
-            <span className="mt-0.5 block truncate text-[9px] text-[#93a0ba] sm:text-[11px]">
-              {activeRegion ? activeRegion.nama : '23 Negeri'}
-            </span>
-          </div>
-        </button>
-
-        {activeRegion && (
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-30 flex items-start justify-between gap-1 px-2.5 py-2 sm:px-6 sm:py-4">
+      {/* Kiri: Logo & Info Wilayah Aktif serta Badge The Light of Aceh di bawahnya */}
+      <div className="pointer-events-auto flex flex-col items-start gap-1">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             type="button"
             onClick={() => {
               setTourPlaying(false);
               selectRegion(null);
             }}
-            aria-label="Kembali ke tampilan seluruh Aceh"
-            className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#25324d] bg-[#121a2b]/95 text-xs font-medium text-[#f3efe6] shadow-lg backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 sm:h-auto sm:w-auto sm:px-3 sm:py-2"
+            className="group flex items-center gap-1.5 rounded-2xl border bg-[#121a2b]/95 p-1.5 text-left shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 sm:gap-3 sm:px-3.5 sm:py-2"
+            style={{
+              borderColor: activeRegion ? accentColor : '#25324d'
+            }}
           >
-            <span aria-hidden="true">↖</span>
-            <span className="hidden sm:inline sm:ml-1.5">Seluruh Aceh</span>
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-[#25324d] bg-[#0b1220] transition-transform duration-300 sm:h-8 sm:w-8 group-hover:scale-105"
+              style={{ color: accentColor }}
+              aria-hidden="true"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <polygon
+                  points="12,2 17,7 19,14 19,21 5,21 5,14 7,7"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+                <polygon points="12,7 15,12 12,18 9,12" fill="currentColor" />
+              </svg>
+            </span>
+            <div className="max-w-[105px] sm:max-w-none">
+              <span className="block truncate font-display text-xs font-bold leading-none text-[#f3efe6] sm:text-base">
+                Nusantara Aceh
+              </span>
+              <span className="mt-0.5 block truncate text-[9px] text-[#93a0ba] sm:text-[11px]">
+                {activeRegion ? activeRegion.nama : '23 Negeri'}
+              </span>
+            </div>
           </button>
-        )}
+
+          {activeRegion && (
+            <button
+              type="button"
+              onClick={() => {
+                setTourPlaying(false);
+                selectRegion(null);
+              }}
+              aria-label="Kembali ke tampilan seluruh Aceh"
+              className="flex h-9 w-9 items-center justify-center rounded-2xl border border-[#25324d] bg-[#121a2b]/95 text-xs font-medium text-[#f3efe6] shadow-lg backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 sm:h-auto sm:w-auto sm:px-3 sm:py-2"
+            >
+              <span aria-hidden="true">↖</span>
+              <span className="hidden sm:inline sm:ml-1.5">Seluruh Aceh</span>
+            </button>
+          )}
+        </div>
+
+        {/* Badge HD The Light of Aceh (Di ujung atas di bawah logo) */}
+        <div
+          id="the-light-of-aceh-badge"
+          className="flex items-center rounded-xl border border-[#f9c74f]/35 bg-[#121a2b]/90 px-2 py-0.5 shadow-md backdrop-blur-md transition-all duration-300 hover:border-[#f9c74f] hover:shadow-[0_0_12px_rgba(249,199,79,0.35)] sm:px-2.5 sm:py-0.5"
+          title="The Light of Aceh - Cahaya Aceh"
+        >
+          <Image
+            src="/images/the-light-of-aceh-hd.png"
+            alt="The Light of Aceh"
+            width={120}
+            height={66}
+            priority
+            className="h-3.5 sm:h-4 w-auto object-contain filter drop-shadow-[0_0_6px_rgba(249,199,79,0.55)] transition-transform duration-300 hover:scale-105"
+          />
+        </div>
       </div>
 
       {/* Kanan: Tur, Cahaya, Cari Wilayah, Audio, & Keluar */}

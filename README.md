@@ -25,6 +25,9 @@ Pengguna dapat mengubah suasana pencahayaan peta secara real-time:
 - Mode Senja: Sudut datang cahaya rendah berwarna hangat untuk bayangan jatuh memanjang.
 - Mode Siang: Pencahayaan merata dengan visibilitas tinggi di seluruh daratan.
 
+### Transisi Sinematik Awan dan Branding The Light of Aceh
+Saat pengguna menekan tombol Mulai Jelajahi Peta 3D, tirai gumpalan awan berlapis bergaya papercut menutup dan menyapu layar secara sinematik serempak dengan pancaran cahaya keemasan. Tipografi dan lambang resmi The Light of Aceh muncul di tengah kabut awan yang memudar dengan pendaran cahaya (glow bloom), kemudian meluncur secara presisi ke area kiri atas tepat di bawah logo utama.
+
 ---
 
 ## 2. Landmark Arsitektur dan Ikon Budaya

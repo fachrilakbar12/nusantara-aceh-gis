@@ -143,6 +143,7 @@ export default function RegionList() {
             audioEngine.stopExperience();
             audioEngine.playHoverTick();
             useAcehStore.getState().setTourPlaying(false);
+            useAcehStore.getState().setCloudTransitioning(false);
             useAcehStore.getState().setEntered(false);
           }}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ff6b6b]/40 bg-[#0b1220] py-2 text-xs font-semibold text-[#ff6b6b] transition-all hover:border-[#ff6b6b] hover:bg-[#ff6b6b]/15"

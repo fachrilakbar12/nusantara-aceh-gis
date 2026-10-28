@@ -24,8 +24,10 @@ interface AcehStoreState {
   rippleEvent: RippleEvent | null;
   lightingMode: LightingMode;
   isTourPlaying: boolean;
+  isCloudTransitioning: boolean;
 
   setEntered: (entered: boolean) => void;
+  setCloudTransitioning: (val: boolean) => void;
   selectRegion: (regionId: string | null) => void;
   nextRegion: () => string;
   prevRegion: () => string;
@@ -57,8 +59,10 @@ export const useAcehStore = create<AcehStoreState>((set, get) => ({
   rippleEvent: null,
   lightingMode: 'malam',
   isTourPlaying: false,
+  isCloudTransitioning: false,
 
   setEntered: (entered) => set({ hasEntered: entered }),
+  setCloudTransitioning: (val) => set({ isCloudTransitioning: val }),
 
   selectRegion: (regionId) => set({ activeRegionId: regionId }),
 
